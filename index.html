@@ -12,93 +12,72 @@
 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
-
-:root {
-  --paper: #EAEFF5;
-  --card: #FFFFFF;
-  --ink: #000000;
-  --ink-soft: #111111;
-  --line: #90A4AE;
-  --deep: #0A2540;
-  --deep-hover: #061726;
-  --green: #007E33;
-  --amber: #B7791F;
-  --blue: #0056B3;
-  --teal: #00838F;
-  --rust: #C53030;
-  --gas: #553C9A;
-  --head: 'Inter', system-ui, sans-serif;
-  --body: 'Inter', system-ui, sans-serif;
-  --mono: 'JetBrains Mono', monospace;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 14px;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(10, 37, 64, 0.08);
-  --focus-ring: 0 0 0 3px rgba(10, 37, 64, 0.25);
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;600&display=swap');
+:root{
+  --paper:#F2F5F1; --card:#FFFFFF; --ink:#13251C; --ink-soft:#4A5B51;
+  --line:#D8E1DA; --green:#1B6B45; --deep:#0C3B27; --amber:#DD9426;
+  --blue:#3A6B8F; --teal:#2C8C7A; --rust:#BF5B2E; --gas:#7A5C93;
+  --head:'Space Grotesk',Segoe UI,system-ui,sans-serif;
+  --body:'IBM Plex Sans',Segoe UI,system-ui,sans-serif;
+  --mono:'IBM Plex Mono',Consolas,monospace;
 }
-
-* { box-sizing: border-box; }
-body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.6; }
-.wrap { max-width: 1300px; margin: 0 auto; padding: 36px 24px 80px; }
-.card { background: var(--card); border: 1.5px solid var(--line); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow-md); }
-h1 { font-family: var(--head); font-weight: 700; font-size: clamp(30px, 4.5vw, 40px); margin: 8px 0 12px; color: var(--deep); letter-spacing: -0.02em; }
-h2 { font-family: var(--head); font-size: 18px; font-weight: 700; margin: 0 0 16px; color: var(--deep); border-bottom: 2px solid var(--paper); padding-bottom: 8px; }
-.eyebrow { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--ink); text-transform: uppercase; }
-.sub { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); max-width: 900px; }
-.hdr { border-bottom: 3px solid var(--deep); padding-bottom: 24px; margin-bottom: 24px; }
-.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
-button { font-family: var(--body); font-size: 13px; font-weight: 700; padding: 9px 14px; border-radius: var(--radius-md); cursor: pointer; border: 1.5px solid var(--deep); background: var(--card); color: var(--deep); box-shadow: var(--shadow-sm); transition: all 0.15s ease; }
-button:hover:not(:disabled) { background: #EBF3FA; }
-button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
-button.solid { background: var(--deep); border-color: var(--deep); color: #fff; box-shadow: 0 2px 4px rgba(10, 37, 64, 0.3); }
-button.solid:hover:not(:disabled) { background: var(--deep-hover); }
-button.dash { border-style: dashed; border-color: var(--deep); color: var(--ink); }
-button.mini { padding: 4px 9px; font-size: 12px; border-radius: var(--radius-sm); }
-button:disabled { opacity: 0.45; cursor: not-allowed; }
-input[type=number], input[type=text], input[type=date], select { font-family: var(--mono); font-size: 13px; font-weight: 700; padding: 7px 9px; border: 1.5px solid var(--line); border-radius: 7px; background: #FFFFFF; color: var(--ink); }
-input::placeholder { color: #333333; opacity: 1; }
-select { font-family: var(--body); }
-label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--ink); }
-table { border-collapse: collapse; width: 100%; }
-th { text-align: right; padding: 7px 9px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #FFFFFF; font-weight: 700; white-space: nowrap; border-bottom: 2px solid var(--deep); background: var(--deep); }
-td { text-align: right; padding: 6px 9px; font-family: var(--mono); font-size: 12.5px; font-weight: 700; white-space: nowrap; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; color: var(--ink); }
-th.l, td.l { text-align: left; }
-td.l { font-family: var(--body); font-weight: 600; }
-tr.hov:hover td { background: #EBF3FA; }
-.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
-.kpi { background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow-sm); }
-.kpi .t { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink); min-height: 28px; }
-.kpi .v { font-family: var(--mono); font-weight: 700; font-size: 26px; margin-top: 2px; color: var(--deep); }
-.kpi .v span { font-size: 13px; margin-left: 5px; color: var(--ink); }
-.badge { font-family: var(--mono); font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
-.b-ok { background: #C6F6D5; color: #1C4532; border: 1px solid #38A169; }
-.b-warn { background: #FEEBC8; color: #7B341E; border: 1px solid #DD6B20; }
-.b-err { background: #FED7D7; color: #742A2A; border: 1px solid #E53E3E; }
-.chip { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); background: #F5F8F5; color: var(--ink); margin: 1px 3px 1px 0; }
-.chip.oze { border-color: #38A169; color: #1C4532; background: #C6F6D5; }
-.chip.gas { border-color: #805AD5; color: #322659; background: #E9D8FD; }
-.scroll { overflow-x: auto; border: 1.5px solid var(--line); border-radius: 8px; background: #FFFFFF; }
-.hgrid { display: grid; grid-template-columns: 64px repeat(24, 1fr); gap: 2px; margin-bottom: 2px; }
-.hcell { height: 13px; border-radius: 2px; }
-.hlbl { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--ink); align-self: center; }
-.hhour { font-family: var(--mono); font-size: 9px; font-weight: 700; text-align: center; color: var(--ink); }
-.legend { display: flex; gap: 14px; font-size: 12px; font-weight: 700; color: var(--ink); flex-wrap: wrap; }
-.legend i { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
-.note { font-size: 12.5px; font-weight: 600; color: var(--ink); }
-.hide { display: none !important; }
-.msg-err { border-color: var(--rust) !important; background: #FFF5F5; color: #742A2A; font-size: 13px; font-weight: 700; }
-.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
-.prev td, .prev th { font-size: 11.5px; padding: 4px 7px; }
-.reg td { padding: 4px 6px; }
-.reg input[type=text], .reg input[type=number], .reg select { padding: 4px 6px; font-size: 12px; width: 100%; }
-.srcrow { background: #F4F7FB; }
-.instr p { max-width: 880px; line-height: 1.6; font-weight: 600; color: var(--ink); }
-.instr h3 { font-family: var(--head); color: var(--deep); font-size: 15px; margin: 14px 0 4px; font-weight: 700; }
-.src { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--deep); margin-left: auto; }
-a { color: var(--deep); font-weight: 700; }
-@media print {.bar,#wizard{display:none}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body);font-size:14px}
+.wrap{max-width:1220px;margin:0 auto;padding:28px 20px 60px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:18px;margin-bottom:16px}
+h1{font-family:var(--head);font-weight:700;font-size:clamp(30px,4.5vw,44px);margin:6px 0 4px;color:var(--deep);letter-spacing:-.02em}
+h2{font-family:var(--head);font-size:19px;margin:0 0 10px;color:var(--deep)}
+.eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.12em;color:var(--ink-soft);text-transform:uppercase}
+.sub{margin:0;font-size:15px;color:var(--ink-soft);max-width:800px}
+.hdr{border-bottom:3px solid var(--deep);padding-bottom:18px;margin-bottom:20px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+button{font-family:var(--body);font-size:13px;font-weight:600;padding:9px 14px;border-radius:8px;cursor:pointer;border:1.5px solid var(--deep);background:var(--card);color:var(--deep)}
+button.solid{background:var(--deep);color:#fff}
+button.dash{border-style:dashed}
+button.mini{padding:4px 9px;font-size:12px;border-radius:6px}
+button:disabled{opacity:.45;cursor:not-allowed}
+input[type=number],input[type=text],input[type=date],select{font-family:var(--mono);font-size:13px;padding:7px 9px;border:1.5px solid var(--line);border-radius:7px;background:#FBFDFB;color:var(--ink)}
+input::placeholder{color:var(--ink);opacity:1}
+select{font-family:var(--body)}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-soft)}
+table{border-collapse:collapse;width:100%}
+th{text-align:right;padding:7px 9px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink);font-weight:600;white-space:nowrap;border-bottom:2px solid var(--deep)}
+td{text-align:right;padding:6px 9px;font-family:var(--mono);font-size:12.5px;white-space:nowrap;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+th.l,td.l{text-align:left}
+td.l{font-family:var(--body)}
+tr.hov:hover td{background:#F3F8F4}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px;margin-bottom:16px}
+.kpi{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
+.kpi .t{font-size:11px;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-soft);min-height:28px}
+.kpi .v{font-family:var(--mono);font-weight:600;font-size:26px;margin-top:2px}
+.kpi .v span{font-size:13px;margin-left:5px;color:var(--ink-soft)}
+.badge{font-family:var(--mono);font-size:12px;font-weight:600;padding:4px 10px;border-radius:999px}
+.b-ok{background:rgba(27,107,69,.12);color:var(--green)}
+.b-warn{background:rgba(221,148,38,.15);color:#9A6A14}
+.b-err{background:rgba(191,91,46,.15);color:var(--rust)}
+.chip{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:999px;border:1px solid var(--line);background:#F5F8F5;margin:1px 3px 1px 0}
+.chip.oze{border-color:rgba(27,107,69,.4);color:var(--green)}
+.chip.gas{border-color:rgba(122,92,147,.5);color:var(--gas)}
+.scroll{overflow-x:auto}
+.hgrid{display:grid;grid-template-columns:64px repeat(24,1fr);gap:2px;margin-bottom:2px}
+.hcell{height:13px;border-radius:2px}
+.hlbl{font-family:var(--mono);font-size:10px;color:var(--ink-soft);align-self:center}
+.hhour{font-family:var(--mono);font-size:9px;text-align:center;color:var(--ink-soft)}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink-soft);flex-wrap:wrap}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.note{font-size:12.5px;color:var(--ink-soft)}
+.hide{display:none}
+.msg-err{border-color:var(--rust)!important;color:var(--rust);font-size:13px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.prev td,.prev th{font-size:11.5px;padding:4px 7px}
+.reg td{padding:4px 6px}
+.reg input[type=text],.reg input[type=number],.reg select{padding:4px 6px;font-size:12px;width:100%}
+.srcrow{background:#F7FAF7}
+.instr p{max-width:880px;line-height:1.6}
+.instr h3{font-family:var(--head);color:var(--deep);font-size:15px;margin:14px 0 4px}
+.src{font-family:var(--mono);font-size:12px;color:var(--ink-soft);margin-left:auto}
+a{color:var(--deep)}
+@media print{.bar,#wizard{display:none}}
 </style>
 </head>
 <body>
@@ -119,8 +98,7 @@ a { color: var(--deep); font-weight: 700; }
     <button id="btnTpl">Szablon CSV</button>
     <button id="btnXlsx">Eksport wyników (XLSX)</button>
     <button id="btnCsv">Eksport wyników (CSV)</button>
-    <button id="btnSelectDir">Folder zapisu</button>
-    <span id="dirStatus" class="note" style="font-family:var(--mono);font-size:12px"></span>
+    <button class="solid" id="btnSaveDb" style="background:var(--teal);border-color:var(--teal)">Zapisz do bazy (Supabase)</button>
     <button class="dash" id="btnCfg">Parametry rozliczenia</button>
     <button class="dash" id="btnInstr">Instrukcja</button>
     <span class="src" id="srcLbl">Dane demonstracyjne · czerwiec 2026</span>
@@ -731,11 +709,10 @@ function validateData(rows, meta, reg) {
 }
 
 /* ---------- silnik rozliczeniowy v0.5 ---------- */
-/* reg: {mode:'combined'|'separated', points:[...]}; prm: ceny domyślne + opust + magazyn + cWewnGas + cSellGas */
 function runEngine(rows, prm, reg) {
   var mode = reg && reg.mode === "separated" ? "separated" : "combined";
   var ptCfg = new Map();
-  var meterOwner = new Map(); /* meterId -> {pid, tech} */
+  var meterOwner = new Map();
   (reg ? reg.points : []).forEach(function (pt) {
     ptCfg.set(pt.id, pt);
     pt.sources.forEach(function (s) {
@@ -762,7 +739,7 @@ function runEngine(rows, prm, reg) {
     if (mo) {
       var mm = ensure(mo.pid);
       var c = cellAt(mm, k);
-      c.p += r.pobor; /* pobór podlicznika (potrzeby własne źródła) doliczany do punktu */
+      c.p += r.pobor;
       var g = pointGroupKey(mo.tech);
       c.gen[g] += r.oddanie;
       c.tech[mo.tech] = (c.tech[mo.tech] || 0) + r.oddanie;
@@ -774,7 +751,6 @@ function runEngine(rows, prm, reg) {
       if (r.name && mm2.name === mm2.id) mm2.name = r.name;
     }
   });
-  /* podział wspólnego licznika na źródła */
   members.forEach(function (mm) {
     var cfg = ptCfg.get(mm.id);
     var shared = cfg ? cfg.sources.filter(function (s) { return s.mode === "shared"; }) : [];
@@ -797,7 +773,6 @@ function runEngine(rows, prm, reg) {
       }
     });
   });
-  /* tryb łączny: cała generacja jako grupa OZE */
   if (mode === "combined") {
     members.forEach(function (mm) {
       mm.data.forEach(function (c) { c.gen.OZE += c.gen.GAS; c.gen.GAS = 0; });
@@ -901,7 +876,6 @@ function runEngine(rows, prm, reg) {
     T.fromStorage += mres.fromStorage; T.fromSeller += mres.fromSeller; T.toStorage += mres.toStorage; T.sold += mres.sold;
     T.oszcz += mres.oszcz; T.kosztSE += mres.kosztSE; T.kosztBez += mres.kosztBez; T.przychod += mres.przychod;
   });
-  /* podsumowanie wg członków (właścicieli) */
   var ownersMap = new Map();
   memberResults.forEach(function (m) {
     var o = ownersMap.get(m.owner);
@@ -967,7 +941,6 @@ var ELEMS = [
   { k: "oszcz", l: "Oszczędność [zł]", d: 2, money: true },
   { k: "przych", l: "Przychód wytwórcy [zł]", d: 2, money: true }
 ];
-/* vc: { from, to, gran: 'hour'|'day'|'month'|'total', mode: 'coop'|'owners'|'points', ids: []|null } */
 function aggregateView(R, prm, vc) {
   var cWG = isFinite(prm.cWewnGas) ? prm.cWewnGas : 0;
   var cSG = isFinite(prm.cSellGas) ? prm.cSellGas : 0;
@@ -1116,7 +1089,7 @@ function demoRegistry() {
 
   /* ---------- konfiguracja: autozapis + JSON ---------- */
   function saveCfg() {
-    try { localStorage.setItem("bilansSE_cfg_v05", JSON.stringify({ prm: state.prm, reg: state.reg, dateFrom: state.dateFrom, dateTo: state.dateTo, view: state.view })); } catch (e) { /* brak dostępu */ }
+    try { localStorage.setItem("bilansSE_cfg_v05", JSON.stringify({ prm: state.prm, reg: state.reg, dateFrom: state.dateFrom, dateTo: state.dateTo, view: state.view })); } catch (e) { }
   }
   function loadCfg() {
     try {
@@ -1129,7 +1102,7 @@ function demoRegistry() {
         state.dateFrom = o.dateFrom || ""; state.dateTo = o.dateTo || "";
         if (o.view) state.view = Object.assign(state.view, o.view);
       }
-    } catch (e) { /* zignoruj */ }
+    } catch (e) { }
   }
   function applyCfgJson(o) {
     if (!o || !o.reg || !Array.isArray(o.reg.points)) { showErr("Nieprawidłowy plik konfiguracji."); return; }
@@ -1140,56 +1113,43 @@ function demoRegistry() {
     syncPrmInputs(); saveCfg(); recompute();
   }
 
-  /* ---------- pobieranie i zapisywanie plików ---------- */
-  var dirHandle = null;
-
-  async function selectDirectory() {
-    if (!window.isSecureContext || !window.showDirectoryPicker) {
-      showErr("Automatyczny dostęp do wybranego folderu (File System Access) wymaga bezpiecznego połączenia (localhost/HTTPS). W trybie pliku lokalnego (file://) przeglądarka zapisuje pliki do wskazanego podfolderu z unikalnym znacznikiem czasu.");
-      return;
-    }
-    try {
-      dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
-      $("dirStatus").textContent = "✓ Folder: " + dirHandle.name;
-      showErr("");
-    } catch (err) {
-      if (err.name !== 'AbortError') {
-        showErr("Nie udało się uzyskać uprawnień do folderu: " + err.message);
-      }
-    }
-  }
+  /* ---------- pobieranie plików ---------- */
+  let dirHandle = null;
 
   async function downloadBlob(name, blob) {
-    var parts = name.split('.');
-    var ext = parts.pop();
-    var baseName = parts.join('.');
-    var d = new Date();
-    var timestamp = d.getFullYear() + "" + pad2(d.getMonth() + 1) + "" + pad2(d.getDate()) + "_" + pad2(d.getHours()) + "" + pad2(d.getMinutes()) + "" + pad2(d.getSeconds());
-    var uniqueName = baseName + "_" + timestamp + "." + ext;
+    const parts = name.split('.');
+    const ext = parts.pop();
+    const baseName = parts.join('.');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const uniqueName = baseName + '_' + timestamp + '.' + ext;
 
-    if (dirHandle) {
+    if (window.showDirectoryPicker) {
       try {
-        var fileHandle = await dirHandle.getFileHandle(uniqueName, { create: true });
-        var writable = await fileHandle.createWritable();
+        if (!dirHandle) {
+          dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+        }
+        const fileHandle = await dirHandle.getFileHandle(uniqueName, { create: true });
+        const writable = await fileHandle.createWritable();
         await writable.write(blob);
         await writable.close();
-        return;
       } catch (err) {
-        showErr("Błąd zapisu do wybranego folderu. Przełączono na pobieranie standardowe.");
+        if (err.name !== 'AbortError') {
+          fallbackDownload(uniqueName, blob);
+        }
       }
+    } else {
+      fallbackDownload(uniqueName, blob);
     }
-    fallbackDownload(uniqueName, blob);
   }
 
   function fallbackDownload(name, blob) {
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "BilansSE_Wyniki/" + name;
+    a.download = name;
     document.body.appendChild(a);
     a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
   }
-
   function downloadCsv(name, headers, rows) {
     var e2 = function (v) { return String(v).replace(".", ","); };
     var body = rows.map(function (r) { return r.map(e2).join(";"); }).join("\n");
@@ -1564,7 +1524,6 @@ function demoRegistry() {
     var R = state.R, v = state.view;
     $("vFrom").value = v.from; $("vTo").value = v.to;
     $("vGran").value = v.gran; $("vMode").value = v.mode;
-    /* podmioty */
     var entHtml = "";
     if (v.mode === "points") {
       entHtml = "<span class='note'>Punkty (puste = wszystkie):</span> " + R.memberResults.map(function (m) {
@@ -1576,11 +1535,9 @@ function demoRegistry() {
       }).join("");
     } else entHtml = "<span class='note'>Zestawienie dla całej spółdzielni (suma wszystkich punktów).</span>";
     $("vEnts").innerHTML = entHtml;
-    /* elementy */
     $("vElems").innerHTML = "<span class='note'>Elementy danych:</span> " + ELEMS.map(function (el) {
       return "<label class='chip' style='cursor:pointer'><input type='checkbox' data-vk='" + el.k + "'" + (v.elems[el.k] ? " checked" : "") + " style='vertical-align:-2px'> " + esc(el.l) + "</label>";
     }).join("");
-    /* tabela */
     var AG = aggregateView(R, state.prm, viewCfg());
     state.AG = AG;
     var cols = ELEMS.filter(function (el) { return v.elems[el.k]; });
@@ -1679,7 +1636,7 @@ function demoRegistry() {
       var name = f.name, lower = name.toLowerCase();
       if (/\.(xlsx|xls)$/.test(lower)) {
         if (!HAS_XLSX()) {
-          showErr("Plik „" + name + "” to Excel, a biblioteka obsługi XLSX nie została załadowana (brak internetu przy pierwszym uruchomieniu?). Zapisz dane jako CSV i spróbuj ponownie — CSV działa w pełni offline.");
+          showErr("Plik „" + name + "” to Excel, a biblioteka obsługi XLSX nie została załadowana. Zapisz dane jako CSV.");
           if (--pending === 0) startWizard();
           return;
         }
@@ -1901,7 +1858,7 @@ function demoRegistry() {
       }));
   }
   function exportXlsx() {
-    if (!HAS_XLSX()) { showErr("Eksport XLSX wymaga jednorazowego uruchomienia z dostępem do internetu (biblioteka Excel). Użyj eksportu CSV — otworzy się w Excelu i Calcu."); return; }
+    if (!HAS_XLSX()) { showErr("Eksport XLSX wymaga jednorazowego uruchomienia z dostępem do internetu (biblioteka Excel). Użyj eksportu CSV."); return; }
     showErr("");
     var R = state.R, prm = state.prm;
     var s1 = [["ID", "Punkt", "Członek", "Rola", "Taryfa", "Pobór [kWh]", "Generacja [kWh]", "Energia SE OZE [kWh]", "Nie-OZE [kWh]", "Od sprzedawcy [kWh]", "Do magazynu [kWh]", "Sprzedaż nadwyżki [kWh]", "Koszt w SE [zł]", "Koszt poza SE [zł]", "Oszczędność [zł]", "Przychód wytwórcy [zł]"]];
@@ -1938,8 +1895,7 @@ function demoRegistry() {
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s2), "Bilans godzinowy");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s3), "Rejestr punktów i źródeł");
     XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s4), "Parametry");
-    var wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
-    downloadBlob("BilansSE_rozliczenie.xlsx", new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+    XLSX.writeFile(wb, "BilansSE_rozliczenie.xlsx");
   }
   function exportDiscrepancies() {
     if (!state.CMP) return;
@@ -1959,6 +1915,67 @@ function demoRegistry() {
       [["2026-06-01", 0, "M1", "Urząd Gminy", "3,4", "0"],
        ["2026-06-01", 1, "M1", "Urząd Gminy", "3,1", "0"],
        ["2026-06-01", 12, "M8", "Instalacja PV SE", "0,5", "128,6"]]);
+  }
+
+  /* ---------- integracja z SUPABASE ---------- */
+  var SUPABASE_URL = "https://ownxtffprtoadhxevryt.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_mI6vGR3Z-6gHQmvkP5WgtA_p0x7kFht";
+
+  async function saveResultsToDatabase() {
+    if (!state.R || !state.R.memberResults.length) {
+      showErr("Brak wyników do zapisania.");
+      return;
+    }
+
+    var btn = $("btnSaveDb");
+    btn.disabled = true;
+    btn.textContent = "Zapisywanie...";
+
+    var payload = state.R.memberResults.map(function (m) {
+      return {
+        okres_od: state.dateFrom || state.R.days[0],
+        okres_do: state.dateTo || state.R.days[state.R.days.length - 1],
+        punkt_id: m.id,
+        nazwa: m.name,
+        wlasciciel: m.owner,
+        rola: m.role,
+        taryfa: m.tariff,
+        pobor_kwh: parseFloat(m.pobor.toFixed(2)),
+        oddanie_kwh: parseFloat(m.oddanie.toFixed(2)),
+        energia_oze_kwh: parseFloat(m.eOZE.toFixed(2)),
+        energia_nieoze_kwh: parseFloat(m.eGAS.toFixed(2)),
+        od_sprzedawcy_kwh: parseFloat(m.fromSeller.toFixed(2)),
+        koszt_se_zl: parseFloat(m.kosztSE.toFixed(2)),
+        koszt_bez_zl: parseFloat(m.kosztBez.toFixed(2)),
+        oszczednosc_zl: parseFloat(m.oszcz.toFixed(2)),
+        przychod_zl: parseFloat(m.przychod.toFixed(2))
+      };
+    });
+
+    try {
+      var res = await fetch(SUPABASE_URL + "/rest/v1/rozliczenia_punkty", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "apikey": SUPABASE_ANON_KEY,
+          "Authorization": "Bearer " + SUPABASE_ANON_KEY,
+          "Prefer": "return=minimal"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        var errBody = await res.text();
+        throw new Error("HTTP " + res.status + ": " + errBody);
+      }
+
+      alert("Pomyślnie zapisano " + payload.length + " rekordów w bazie Supabase!");
+    } catch (err) {
+      showErr("Błąd zapisu do Supabase: " + err.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Zapisz do bazy (Supabase)";
+    }
   }
 
   /* ---------- parametry ---------- */
@@ -1983,11 +2000,11 @@ function demoRegistry() {
 
   /* ---------- zdarzenia ogólne ---------- */
   function setTopActive(btnId) {
-    ["btnImport", "btnDemo", "btnTpl", "btnXlsx", "btnCsv", "btnSelectDir", "btnCfg", "btnInstr"].forEach(function (id) {
+    ["btnImport", "btnDemo", "btnTpl", "btnXlsx", "btnCsv", "btnCfg", "btnInstr", "btnSaveDb"].forEach(function (id) {
       var btn = $(id);
       if (!btn) return;
       if (id === btnId) btn.classList.add("solid");
-      else btn.classList.remove("solid");
+      else if (id !== "btnSaveDb") btn.classList.remove("solid");
     });
   }
 
@@ -2016,7 +2033,7 @@ function demoRegistry() {
   $("btnTpl").addEventListener("click", function () { setTopActive("btnTpl"); exportTemplate(); });
   $("btnXlsx").addEventListener("click", function () { setTopActive("btnXlsx"); exportXlsx(); });
   $("btnCsv").addEventListener("click", function () { setTopActive("btnCsv"); exportCsvResults(); });
-  $("btnSelectDir").addEventListener("click", selectDirectory);
+  $("btnSaveDb").addEventListener("click", saveResultsToDatabase);
   $("btnCfg").addEventListener("click", function () {
     var b = $("cfgBox");
     b.classList.toggle("hide");
