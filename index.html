@@ -1,0 +1,2093 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bilans SE — narzędzie rozliczeniowe spółdzielni energetycznej</title>
+<meta name="author" content="Krzysztof Kasprzak">
+<!--
+  Bilans SE — narzędzie rozliczeniowe spółdzielni energetycznej
+  Autor aplikacji i silnika rozliczeniowego: Krzysztof Kasprzak
+  Wykonano dla: Mazowiecka Agencja Energetyczna — projekty Hercules / Octopus, 2026
+-->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+
+:root {
+  --paper: #EAEFF5;
+  --card: #FFFFFF;
+  --ink: #000000;
+  --ink-soft: #111111;
+  --line: #90A4AE;
+  --deep: #0A2540;
+  --deep-hover: #061726;
+  --green: #007E33;
+  --amber: #B7791F;
+  --blue: #0056B3;
+  --teal: #00838F;
+  --rust: #C53030;
+  --gas: #553C9A;
+  --head: 'Inter', system-ui, sans-serif;
+  --body: 'Inter', system-ui, sans-serif;
+  --mono: 'JetBrains Mono', monospace;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 12px rgba(10, 37, 64, 0.08);
+  --focus-ring: 0 0 0 3px rgba(10, 37, 64, 0.25);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--body); font-size: 14px; line-height: 1.6; }
+.wrap { max-width: 1300px; margin: 0 auto; padding: 36px 24px 80px; }
+.card { background: var(--card); border: 1.5px solid var(--line); border-radius: var(--radius-lg); padding: 24px; margin-bottom: 20px; box-shadow: var(--shadow-md); }
+h1 { font-family: var(--head); font-weight: 700; font-size: clamp(30px, 4.5vw, 40px); margin: 8px 0 12px; color: var(--deep); letter-spacing: -0.02em; }
+h2 { font-family: var(--head); font-size: 18px; font-weight: 700; margin: 0 0 16px; color: var(--deep); border-bottom: 2px solid var(--paper); padding-bottom: 8px; }
+.eyebrow { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.1em; color: var(--ink); text-transform: uppercase; }
+.sub { margin: 0; font-size: 15px; font-weight: 600; color: var(--ink); max-width: 900px; }
+.hdr { border-bottom: 3px solid var(--deep); padding-bottom: 24px; margin-bottom: 24px; }
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 12px; }
+button { font-family: var(--body); font-size: 13px; font-weight: 700; padding: 9px 14px; border-radius: var(--radius-md); cursor: pointer; border: 1.5px solid var(--deep); background: var(--card); color: var(--deep); box-shadow: var(--shadow-sm); transition: all 0.15s ease; }
+button:hover:not(:disabled) { background: #EBF3FA; }
+button:focus-visible { outline: none; box-shadow: var(--focus-ring); }
+button.solid { background: var(--deep); border-color: var(--deep); color: #fff; box-shadow: 0 2px 4px rgba(10, 37, 64, 0.3); }
+button.solid:hover:not(:disabled) { background: var(--deep-hover); }
+button.dash { border-style: dashed; border-color: var(--deep); color: var(--ink); }
+button.mini { padding: 4px 9px; font-size: 12px; border-radius: var(--radius-sm); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
+input[type=number], input[type=text], input[type=date], select { font-family: var(--mono); font-size: 13px; font-weight: 700; padding: 7px 9px; border: 1.5px solid var(--line); border-radius: 7px; background: #FFFFFF; color: var(--ink); }
+input::placeholder { color: #333333; opacity: 1; }
+select { font-family: var(--body); }
+label.f { display: flex; flex-direction: column; gap: 4px; font-size: 12px; font-weight: 700; color: var(--ink); }
+table { border-collapse: collapse; width: 100%; }
+th { text-align: right; padding: 7px 9px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #FFFFFF; font-weight: 700; white-space: nowrap; border-bottom: 2px solid var(--deep); background: var(--deep); }
+td { text-align: right; padding: 6px 9px; font-family: var(--mono); font-size: 12.5px; font-weight: 700; white-space: nowrap; border-bottom: 1px solid var(--line); font-variant-numeric: tabular-nums; color: var(--ink); }
+th.l, td.l { text-align: left; }
+td.l { font-family: var(--body); font-weight: 600; }
+tr.hov:hover td { background: #EBF3FA; }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 12px; margin-bottom: 16px; }
+.kpi { background: var(--card); border: 1.5px solid var(--line); border-radius: 12px; padding: 14px 16px; box-shadow: var(--shadow-sm); }
+.kpi .t { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em; color: var(--ink); min-height: 28px; }
+.kpi .v { font-family: var(--mono); font-weight: 700; font-size: 26px; margin-top: 2px; color: var(--deep); }
+.kpi .v span { font-size: 13px; margin-left: 5px; color: var(--ink); }
+.badge { font-family: var(--mono); font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 999px; }
+.b-ok { background: #C6F6D5; color: #1C4532; border: 1px solid #38A169; }
+.b-warn { background: #FEEBC8; color: #7B341E; border: 1px solid #DD6B20; }
+.b-err { background: #FED7D7; color: #742A2A; border: 1px solid #E53E3E; }
+.chip { display: inline-block; font-family: var(--mono); font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 999px; border: 1px solid var(--line); background: #F5F8F5; color: var(--ink); margin: 1px 3px 1px 0; }
+.chip.oze { border-color: #38A169; color: #1C4532; background: #C6F6D5; }
+.chip.gas { border-color: #805AD5; color: #322659; background: #E9D8FD; }
+.scroll { overflow-x: auto; border: 1.5px solid var(--line); border-radius: 8px; background: #FFFFFF; }
+.hgrid { display: grid; grid-template-columns: 64px repeat(24, 1fr); gap: 2px; margin-bottom: 2px; }
+.hcell { height: 13px; border-radius: 2px; }
+.hlbl { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--ink); align-self: center; }
+.hhour { font-family: var(--mono); font-size: 9px; font-weight: 700; text-align: center; color: var(--ink); }
+.legend { display: flex; gap: 14px; font-size: 12px; font-weight: 700; color: var(--ink); flex-wrap: wrap; }
+.legend i { display: inline-block; width: 11px; height: 11px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+.note { font-size: 12.5px; font-weight: 600; color: var(--ink); }
+.hide { display: none !important; }
+.msg-err { border-color: var(--rust) !important; background: #FFF5F5; color: #742A2A; font-size: 13px; font-weight: 700; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; }
+.prev td, .prev th { font-size: 11.5px; padding: 4px 7px; }
+.reg td { padding: 4px 6px; }
+.reg input[type=text], .reg input[type=number], .reg select { padding: 4px 6px; font-size: 12px; width: 100%; }
+.srcrow { background: #F4F7FB; }
+.instr p { max-width: 880px; line-height: 1.6; font-weight: 600; color: var(--ink); }
+.instr h3 { font-family: var(--head); color: var(--deep); font-size: 15px; margin: 14px 0 4px; font-weight: 700; }
+.src { font-family: var(--mono); font-size: 12px; font-weight: 700; color: var(--deep); margin-left: auto; }
+a { color: var(--deep); font-weight: 700; }
+@media print {.bar,#wizard{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="hdr">
+    <div class="eyebrow">Autor: Krzysztof Kasprzak · MAE · Hercules / Octopus · Wersja 0.5 — aplikacja lokalna</div>
+    <h1>Bilans SE</h1>
+    <p class="sub">Narzędzie rozliczeniowe spółdzielni energetycznej: import danych pomiarowych (CSV / Excel, różne formaty OSD)
+    → rejestr członków, źródeł wytwórczych i taryf → walidacja → bilansowanie godzinowe z podziałem technologii OZE / nie-OZE
+    → rozliczenie członków → etapy obliczeń → porównanie z systemem zewnętrznym. Dane przetwarzane wyłącznie lokalnie.</p>
+  </div>
+
+  <div class="bar">
+    <button class="solid" id="btnImport">Wczytaj pliki danych (CSV / XLSX)</button>
+    <input type="file" id="fileIn" accept=".csv,.txt,.xlsx,.xls" multiple class="hide">
+    <button id="btnDemo">Dane demo</button>
+    <button id="btnTpl">Szablon CSV</button>
+    <button id="btnXlsx">Eksport wyników (XLSX)</button>
+    <button id="btnCsv">Eksport wyników (CSV)</button>
+    <button id="btnSelectDir">Folder zapisu</button>
+    <span id="dirStatus" class="note" style="font-family:var(--mono);font-size:12px"></span>
+    <button class="dash" id="btnCfg">Parametry rozliczenia</button>
+    <button class="dash" id="btnInstr">Instrukcja</button>
+    <span class="src" id="srcLbl">Dane demonstracyjne · czerwiec 2026</span>
+  </div>
+  <div id="errBox" class="card msg-err hide" aria-live="polite"></div>
+
+  <!-- ================= KREATOR IMPORTU ================= -->
+  <div id="wizard" class="card hide">
+    <h2>Kreator importu — plik <span id="wzFileNo"></span>: <span id="wzFileName" style="font-family:var(--mono);font-size:14px"></span></h2>
+    <div class="bar" style="margin-bottom:8px">
+      <label class="f" id="wzSheetWrap">Arkusz<select id="wzSheet"></select></label>
+      <label class="f">Wiersz nagłówka<input type="number" id="wzHead" min="1" step="1" style="width:70px"></label>
+      <label class="f">Układ danych
+        <select id="wzFormat">
+          <option value="long">długi — wiersz = godzina (data, godzina, wartości)</option>
+          <option value="timestamp">znacznik czasu — data i czas w jednej kolumnie (15 lub 60 min)</option>
+          <option value="wide">szeroki — wiersz = doba, 24 kolumny godzinowe</option>
+        </select>
+      </label>
+      <label class="f">Konwencja godzin
+        <select id="wzConv"><option value="auto">auto</option><option value="0">0–23</option><option value="1">1–24</option></select>
+      </label>
+      <label class="f">Jednostka
+        <select id="wzUnit"><option value="1">kWh</option><option value="1000">MWh</option><option value="0.001">Wh</option></select>
+      </label>
+    </div>
+    <div class="grid2" id="wzMap"></div>
+    <div class="bar" style="margin:10px 0 4px">
+      <label class="f">Ten plik zawiera
+        <select id="wzDir">
+          <option value="both">pobór i oddanie (osobne kolumny lub kolumna kierunku)</option>
+          <option value="pobor">tylko pobór (A+)</option>
+          <option value="oddanie">tylko oddanie (A−)</option>
+        </select>
+      </label>
+      <label class="f">Stały ID punktu (gdy brak kolumny ID)<input type="text" id="wzConstId" style="width:180px"></label>
+      <label class="f">Nazwa punktu (opcjonalnie)<input type="text" id="wzConstName" style="width:200px"></label>
+    </div>
+    <div class="scroll"><table class="prev" id="wzPrev"></table></div>
+    <div class="note" id="wzStat" style="margin-top:8px"></div>
+    <div class="bar" style="margin-top:10px">
+      <button class="solid" id="wzAdd">Dodaj ten plik do zestawu</button>
+      <button id="wzSkip">Pomiń plik</button>
+      <button id="wzCancel">Anuluj import</button>
+      <span class="note" id="wzQueue"></span>
+    </div>
+  </div>
+
+  <!-- ================= PARAMETRY ================= -->
+  <div id="cfgBox" class="card hide">
+    <h2>Parametry domyślne rozliczenia</h2>
+    <div class="bar" style="margin:0 0 10px">
+      <label class="f">Współczynnik opustu (OZE)<input type="number" step="0.05" id="pOpust"></label>
+      <label class="f">Magazyn początkowy [kWh]<input type="number" step="10" id="pMag"></label>
+      <label class="f">Cena energii sprzedawcy [zł/kWh]<input type="number" step="0.01" id="pEn"></label>
+      <label class="f">Opłaty dystryb. zmienne [zł/kWh]<input type="number" step="0.01" id="pDy"></label>
+      <label class="f">Opłaty zwolnione dla SE [zł/kWh]<input type="number" step="0.01" id="pZw"></label>
+      <label class="f">Cena wewn. energii OZE [zł/kWh]<input type="number" step="0.01" id="pWe"></label>
+      <label class="f">Cena wewn. energii nie-OZE [zł/kWh]<input type="number" step="0.01" id="pWg"></label>
+      <label class="f">Sprzedaż nadwyżki nie-OZE [zł/kWh]<input type="number" step="0.01" id="pSg"></label>
+    </div>
+    <div class="bar" style="margin:0">
+      <label class="f">Tryb rozliczania technologii
+        <select id="pMode">
+          <option value="combined">łączny — cała generacja jako energia spółdzielcza</option>
+          <option value="separated">odseparowany — OZE z opustem i zwolnieniami, nie-OZE osobno</option>
+        </select>
+      </label>
+      <label class="f">Okres rozliczenia od<input type="date" id="pFrom"></label>
+      <label class="f">do<input type="date" id="pTo"></label>
+      <span class="note" style="max-width:420px">Ceny netto. Wartości domyślne można nadpisać indywidualnie dla każdego punktu w rejestrze.
+      W trybie odseparowanym energia nie-OZE (np. kogeneracja gazowa) nie korzysta z opustu ani zwolnień, a jej nadwyżka jest
+      sprzedawana do sieci po wskazanej cenie.</span>
+    </div>
+  </div>
+
+  <!-- ================= INSTRUKCJA (skrót) ================= -->
+  <div id="instrBox" class="card instr hide">
+    <h2>Instrukcja skrócona</h2>
+    <h3>1. Uruchomienie i dane</h3>
+    <p>Jeden plik HTML — dwuklik w Chrome/Edge/Firefox, bez instalacji; internet potrzebny tylko do obsługi plików Excel[cite: 1].
+    „Wczytaj pliki danych" otwiera kreator importu (układy: długi, znacznik czasu, szeroki; 0–23/1–24; kWh/MWh/Wh; dane
+    15-minutowe sumowane do godzin; osobne pliki A+ i A− scalane po tym samym ID)[cite: 1]. Dane pozostają na tym komputerze[cite: 1].</p>
+    <h3>2. Rejestr członków i źródeł</h3>
+    <p>W rejestrze konfigurujesz każdy punkt: nazwę, członka (kilka punktów może należeć do jednego członka), rolę, grupę
+    taryfową i indywidualne stawki oraz opłatę stałą[cite: 1]. Do punktu dodajesz źródła wytwórcze (PV, wiatr, hydro, biogaz, biomasa,
+    kogeneracja gazowa, inne) z mocą [kW][cite: 1]. Źródło może korzystać ze wspólnego licznika punktu (produkcja dzielona wg mocy lub
+    zadanych udziałów %) albo mieć własny szereg pomiarowy — wtedy wpisz ID podlicznika, a jego dane zostaną przypisane do
+    punktu nadrzędnego[cite: 1]. Konfigurację można zapisać/wczytać jako plik JSON; jest też zapamiętywana automatycznie w przeglądarce[cite: 1].</p>
+    <h3>3. Tryby rozliczania technologii</h3>
+    <p><b>Łączny</b> — cała generacja traktowana jak energia spółdzielcza (opust, zwolnienia)[cite: 1]. <b>Odseparowany</b> — technologie
+    OZE (PV, wiatr, hydro, biogaz, biomasa) korzystają z wymiany, magazynu z opustem i zwolnień; energia nie-OZE (kogeneracja
+    gazowa) pokrywa deficyty po cenie wewnętrznej nie-OZE, ale z pełnymi opłatami dystrybucyjnymi, a jej nadwyżka jest
+    sprzedawana do sieci[cite: 1]. Kolejność pokrycia deficytu w godzinie: wymiana OZE → energia nie-OZE → magazyn OZE → sprzedawca[cite: 1].</p>
+    <h3>4. Wyniki i eksport</h3>
+    <p>Walidacja (kompletność, duplikaty, spójność mocy źródeł z pomiarami), wskaźniki, struktura wytwarzania wg technologii,
+    taśma godzinowa, etapy obliczeń (audyt), rozliczenie punktów i podsumowanie wg członków, moduł porównawczy z raportem
+    rozbieżności[cite: 1]. Eksport XLSX (Excel 2007+/Calc) i CSV[cite: 1]. Pełny opis — w dokumencie instrukcji dołączonym do aplikacji[cite: 1].</p>
+    <h3>5. Konkretny przykład użycia na danych demonstracyjnych (Czerwiec 2026)</h3>
+    <p>Kliknięcie przycisku „Dane demo” wczytuje 720 godzin pomiarów (czerwiec 2026 r.) dla modelowej Gminnej Spółdzielni Energetycznej liczącej 9 punktów pomiarowych (PPE)[cite: 1]. Struktura odbioru obejmuje punkty komunalne o dziennym profilu pracy (M1 Urząd Gminy, M2 Szkoła Podstawowa z wakacyjnym spadkiem poboru od 27 czerwca), stabilne obciążenie przemysłowe (M3 Oczyszczalnia ścieków z ciągłym poborem ~18 kWh/h), profile ze szczytami porannymi i wieczornymi (M4 Stacja uzdatniania wody, M7 Gospodarstwo rolne B) oraz odbiorcę nocnego (M5 Piekarnia „Kłos”) konsumującego generację poza szczytem słonecznym[cite: 1]. Po stronie generacji pracują: prosument z PV 50 kWp (M6 Gospodarstwo rolne A), główna instalacja spółdzielcza OZE (M8 PV 150 kWp + Biogazownia 40 kW) oraz jednostka dyspozycyjna nie-OZE w trybie odseparowanym (M9 Kogeneracja gazowa 60 kW)[cite: 1]. W danych demonstracyjnych zaszyto jednodniowy postój serwisowy biogazowni w dniu 12 czerwca[cite: 1]. Klikając ten dzień na taśmie godzinowej, można zaobserwować na wykresie spadek krzywej generacji oraz wymuszone dociążenie magazynu i zakupu od zewnętrznego sprzedawcy[cite: 1]. W zakładce „Etapy obliczeń” dla dnia 12 czerwca narzędzie pozwala szczegółowo prześledzić priorytety bilansowania w każdej godzinie: w pierwszej kolejności zapotrzebowanie pokrywa bieżąca generacja OZE, w drugiej energia nie-OZE z kogeneracji (po cenie wewnętrznej 0,55 zł/kWh z opłatami dystrybucyjnymi), w trzeciej wirtualny magazyn OZE (z opustem 0,6), a pozostały deficyt uzupełnia sprzedawca sieciowy[cite: 1]. Łączny pobór wynosi ~32,5 MWh przy produkcji ~34,1 MWh, co daje wskaźnik pokrycia potrzeb na poziomie ~74% (powyżej wymaganego progu 70%) oraz ponad 80% udziału energii lokalnej w poborze[cite: 1]. Działanie modułu audytowego można szybko zweryfikować na samym dole w sekcji „Porównanie z systemem zewnętrznym” – kliknięcie „Przykład rozbieżności (demo)” ładuje zewnętrzny zbiór testowy, w którym silnik automatycznie wykrywa i oznacza statusem ROZBIEŻNOŚĆ trzy celowo wprowadzone odchylenia (w tym błąd wolumenu dla M2 o 3,7% i odchylenie kosztowe dla M4), generując gotowy raport rozbieżności do eksportu CSV[cite: 1].</p>
+  </div>
+
+  <!-- ================= REJESTR ================= -->
+  <div class="card">
+    <div class="bar" style="margin-bottom:8px">
+      <h2 style="margin:0">Rejestr członków, punktów i źródeł wytwórczych</h2>
+      <button class="mini" id="regSeed">Uzupełnij z danych pomiarowych</button>
+      <button class="mini" id="regAdd">Dodaj punkt</button>
+      <button class="mini" id="regExp">Zapisz konfigurację (JSON)</button>
+      <button class="mini" id="regImp">Wczytaj konfigurację (JSON)</button>
+      <input type="file" id="regFile" accept=".json" class="hide">
+    </div>
+    <p class="note" style="margin:0 0 10px">Puste pole ceny = stawka domyślna z parametrów. Kilka punktów z tym samym „Członkiem" jest
+    sumowanych w podsumowaniu wg członków. Źródła: „wspólny licznik" dzieli produkcję punktu wg mocy lub udziałów %;
+    „osobny szereg" pobiera produkcję z podlicznika o podanym ID (punkt podlicznika znika z listy członków).</p>
+    <div class="scroll"><table class="reg" id="regTbl" style="min-width:1100px"></table></div>
+  </div>
+
+  <div class="card" id="valBox"></div>
+  <div class="kpis" id="kpiBox"></div>
+
+  <div class="card">
+    <h2>Struktura wytwarzania wg technologii</h2>
+    <div class="scroll"><table id="techTbl" style="min-width:520px;max-width:760px"></table></div>
+  </div>
+
+  <div class="card">
+    <div class="bar" style="margin-bottom:10px">
+      <h2 style="margin:0">Taśma godzinowa spółdzielni</h2>
+      <span class="note">każda komórka = 1 godzina · kliknij dzień, aby zobaczyć profil i etapy obliczeń</span>
+      <div class="legend" style="margin-left:auto">
+        <span><i style="background:rgba(221,148,38,.8)"></i>nadwyżka → magazyn</span>
+        <span><i style="background:rgba(44,140,122,.8)"></i>deficyt z magazynu</span>
+        <span><i style="background:rgba(58,107,143,.8)"></i>deficyt od sprzedawcy</span>
+      </div>
+    </div>
+    <div class="scroll"><div style="min-width:640px" id="heatBox"></div></div>
+  </div>
+
+  <div class="card">
+    <div class="bar" style="margin-bottom:6px">
+      <h2 id="chartTitle" style="margin:0">Profil dobowy</h2>
+      <button class="mini" id="dayPrev" title="Poprzedni dzień" aria-label="Poprzedni dzień">◀</button>
+      <input type="date" id="dayPick" style="padding:5px 8px" aria-label="Wybierz datę profilu dobowego">
+      <button class="mini" id="dayNext" title="Następny dzień" aria-label="Następny dzień">▶</button>
+      <span class="note">wybierz datę lub kliknij dzień na taśmie godzinowej</span>
+    </div>
+    <div class="legend" id="chartLegend" style="margin-bottom:6px">
+      <span><i style="background:var(--blue)"></i>pobór</span>
+      <span><i style="background:var(--amber)"></i>wprowadzenie</span>
+      <span><i style="background:var(--teal)"></i>z magazynu</span>
+      <span><i style="background:var(--rust)"></i>od sprzedawcy</span>
+    </div>
+    <div id="chartBox"></div>
+  </div>
+
+  <div class="card scroll">
+    <div class="bar" style="margin-bottom:8px">
+      <h2 style="margin:0" id="stepsTitle">Etapy obliczeń — audyt godzinowy</h2>
+      <select id="stepsWho" style="min-width:220px" aria-label="Wybierz punkt do audytu"></select>
+    </div>
+    <p class="note" id="stepsNote" style="margin:0 0 10px"></p>
+    <table id="stepsTbl" style="min-width:920px"></table>
+  </div>
+
+  <div class="card" id="viewCard">
+    <div class="bar" style="margin-bottom:6px">
+      <h2 style="margin:0">Konfigurowalny widok wyników</h2>
+      <button class="mini" id="vCsv">Eksport tego widoku (CSV)</button>
+    </div>
+    <p class="note" style="margin:0 0 10px">Zestawienie budowane z etapów godzinowych: wybierz zakres dat (lub pojedynczą dobę strzałkami),
+    granulację, podmioty i elementy danych. Wartości pieniężne w tym widoku nie obejmują opłat stałych — te są doliczane
+    w rozliczeniu całego okresu (tabele poniżej).</p>
+    <div class="bar" style="margin-bottom:6px">
+      <label class="f">Od<input type="date" id="vFrom"></label>
+      <label class="f">Do<input type="date" id="vTo"></label>
+      <button class="mini" id="vPrevD" title="Poprzednia doba" aria-label="Poprzednia doba">◀ doba</button>
+      <button class="mini" id="vNextD" title="Następna doba" aria-label="Następna doba">doba ▶</button>
+      <button class="mini" id="vAllD" title="Cały zakres danych">cały okres</button>
+      <label class="f">Granulacja
+        <select id="vGran">
+          <option value="hour">godzinowa</option>
+          <option value="day" selected>dobowa</option>
+          <option value="month">miesięczna</option>
+          <option value="total">suma okresu</option>
+        </select>
+      </label>
+      <label class="f">Podmiot
+        <select id="vMode">
+          <option value="coop" selected>cała spółdzielnia</option>
+          <option value="owners">członkowie</option>
+          <option value="points">punkty</option>
+        </select>
+      </label>
+    </div>
+    <div id="vEnts" class="bar" style="margin-bottom:4px"></div>
+    <div id="vElems" class="bar" style="margin-bottom:8px"></div>
+    <div class="scroll"><table id="viewTbl" style="min-width:760px"></table></div>
+    <div class="note" id="vNote" style="margin-top:6px"></div>
+  </div>
+
+  <div class="card scroll">
+    <h2>Rozliczenie punktów — okres danych</h2>
+    <table id="memTbl" style="min-width:1080px"></table>
+  </div>
+
+  <div class="card scroll" id="ownerCard">
+    <h2>Podsumowanie wg członków</h2>
+    <table id="ownerTbl" style="min-width:900px"></table>
+  </div>
+
+  <div class="card">
+    <div class="bar" style="margin-bottom:8px">
+      <h2 style="margin:0">Porównanie z systemem zewnętrznym</h2>
+      <span id="cmpBadge"></span>
+    </div>
+    <div class="bar">
+      <button class="solid" id="btnExt">Wczytaj wyniki zewnętrzne (CSV / XLSX)</button>
+      <input type="file" id="extIn" accept=".csv,.txt,.xlsx,.xls" class="hide">
+      <button id="btnExtDemo">Przykład rozbieżności (demo)</button>
+      <button id="btnExtCsv" class="hide">Eksport raportu rozbieżności (CSV)</button>
+      <label class="f" style="flex-direction:row;align-items:center;gap:6px">Tolerancja:
+        <input type="number" id="tolIn" step="0.5" min="0" style="width:64px"> %</label>
+      <label class="f hide" id="showAllWrap" style="flex-direction:row;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="showAllChk"> pokaż także wartości zgodne</label>
+    </div>
+    <p class="note" id="cmpInfo" style="max-width:800px">Wczytaj plik z wynikami rozliczeń z systemu zewnętrznego
+      (kolumna „id" + dowolne kolumny wyników w nazewnictwie zgodnym z eksportem z tego narzędzia). Narzędzie porówna
+      wartości punkt po punkcie, oznaczy rozbieżności przekraczające tolerancję i wygeneruje raport.</p>
+    <div class="scroll"><div id="cmpBox"></div></div>
+  </div>
+
+  <div class="card note" style="line-height:1.65">
+    <div style="font-family:var(--head);font-size:15px;color:var(--deep);margin-bottom:6px">
+      Założenia modelu (wersja robocza — kalibracja w etapach E1–E2 wg OPZ)</div>
+    Bilans punktu liczony godzinowo: pobór − generacja. Deficyty pokrywane w kolejności: wymiana energii OZE w tej samej
+    godzinie → energia nie-OZE (w trybie odseparowanym) → magazyn sieciowy OZE → zakup od sprzedawcy. Nadwyżka OZE trafia do
+    magazynu z opustem (zapis = nadwyżka × współczynnik opustu); nadwyżka nie-OZE jest sprzedawana do sieci. Energia
+    spółdzielcza OZE zwolniona z opłat: OZE, mocowej, kogeneracyjnej, akcyzy i zmiennych opłat dystrybucyjnych; energia
+    nie-OZE ponosi pełne opłaty dystrybucyjne. Alokacja na punkty proporcjonalna do udziału w godzinowym deficycie/nadwyżce.
+    Podział produkcji wspólnego licznika między źródła wg mocy zainstalowanej lub zadanych udziałów (oznaczany jako szacunek);
+    rozliczenie dokładne wymaga podliczników („osobny szereg"). Model nie uwzględnia jeszcze: bilansowania międzyfazowego,
+    12-miesięcznego okresu ważności depozytu (FIFO), taryf strefowych i cen dynamicznych. Dane przetwarzane są wyłącznie lokalnie.
+  </div>
+
+  <div style="text-align:center;font-family:var(--mono);font-size:12px;color:var(--ink-soft);padding:4px 0 0">
+    Bilans SE v0.5 · Autor aplikacji i silnika rozliczeniowego: <b style="color:var(--deep)">Krzysztof Kasprzak</b> · dla Mazowieckiej Agencji Energetycznej (Hercules / Octopus) · 2026
+  </div>
+
+</div>
+
+<!--APP-SCRIPT-START-->
+<script>
+/*CORE-START*/
+/* Silnik rozliczeniowy Bilans SE — autor: Krzysztof Kasprzak, 2026 */
+"use strict";
+/* ---------- narzędzia ---------- */
+function fmt(n, d) {
+  d = d || 0;
+  if (!isFinite(n)) n = 0;
+  return n.toLocaleString("pl-PL", { minimumFractionDigits: d, maximumFractionDigits: d });
+}
+function num(v) {
+  if (v === null || v === undefined || v === "") return NaN;
+  var s = String(v).trim().replace(/\u00A0/g, "").replace(/\s/g, "");
+  if (s.indexOf(",") >= 0 && s.indexOf(".") >= 0) s = s.replace(/\./g, "").replace(",", ".");
+  else s = s.replace(",", ".");
+  var f = parseFloat(s);
+  return isFinite(f) ? f : NaN;
+}
+function normHeader(f) {
+  return String(f).toLowerCase()
+    .replace(/ą/g, "a").replace(/ć/g, "c").replace(/ę/g, "e").replace(/ł/g, "l")
+    .replace(/ń/g, "n").replace(/ó/g, "o").replace(/ś/g, "s").replace(/[żź]/g, "z")
+    .replace(/[^a-z0-9+\-_ ]/g, "").trim();
+}
+function pad2(n) { return String(n).padStart(2, "0"); }
+
+function excelSerialToParts(n) {
+  var ms = Math.round((n - 25569) * 86400000);
+  var d = new Date(ms);
+  return {
+    date: d.getUTCFullYear() + "-" + pad2(d.getUTCMonth() + 1) + "-" + pad2(d.getUTCDate()),
+    hour: d.getUTCHours(), minute: d.getUTCMinutes()
+  };
+}
+function normDT(v) {
+  if (v === null || v === undefined || v === "") return null;
+  if (typeof v === "number" && v > 20000 && v < 80000) return excelSerialToParts(v);
+  var s = String(v).trim();
+  if (/^\d+([.,]\d+)?$/.test(s)) {
+    var f = num(s);
+    if (f > 20000 && f < 80000) return excelSerialToParts(f);
+  }
+  var m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T ](\d{1,2}):(\d{2}))?/);
+  if (m) return { date: m[1] + "-" + pad2(+m[2]) + "-" + pad2(+m[3]), hour: m[4] !== undefined ? +m[4] : null, minute: m[5] !== undefined ? +m[5] : null };
+  m = s.match(/^(\d{1,2})[.](\d{1,2})[.](\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if (m) return { date: m[3] + "-" + pad2(+m[2]) + "-" + pad2(+m[1]), hour: m[4] !== undefined ? +m[4] : null, minute: m[5] !== undefined ? +m[5] : null };
+  m = s.match(/^(\d{1,2})[\/](\d{1,2})[\/](\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+  if (m) return { date: m[3] + "-" + pad2(+m[2]) + "-" + pad2(+m[1]), hour: m[4] !== undefined ? +m[4] : null, minute: m[5] !== undefined ? +m[5] : null };
+  return null;
+}
+
+/* ---------- CSV ---------- */
+function detectDelimiter(text) {
+  var line = "", i = 0, inQ = false;
+  for (; i < text.length; i++) {
+    var c = text[i];
+    if (c === '"') inQ = !inQ;
+    if ((c === "\n" || c === "\r") && !inQ) { if (line.trim()) break; line = ""; continue; }
+    line += c;
+  }
+  var best = ";", bestN = -1;
+  [";", "\t", ",", "|"].forEach(function (d) {
+    var n = 0, q = false;
+    for (var j = 0; j < line.length; j++) {
+      if (line[j] === '"') q = !q;
+      else if (line[j] === d && !q) n++;
+    }
+    if (n > bestN) { bestN = n; best = d; }
+  });
+  return best;
+}
+function parseCSVText(text) {
+  text = text.replace(/^\uFEFF/, "");
+  var d = detectDelimiter(text);
+  var rows = [], row = [], cur = "", inQ = false;
+  for (var i = 0; i < text.length; i++) {
+    var c = text[i];
+    if (inQ) {
+      if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else inQ = false; }
+      else cur += c;
+    } else {
+      if (c === '"') inQ = true;
+      else if (c === d) { row.push(cur); cur = ""; }
+      else if (c === "\n") { row.push(cur); rows.push(row); row = []; cur = ""; }
+      else if (c === "\r") { /* pomiń */ }
+      else cur += c;
+    }
+  }
+  if (cur !== "" || row.length) { row.push(cur); rows.push(row); }
+  rows = rows.filter(function (r) { return r.some(function (c2) { return String(c2).trim() !== ""; }); });
+  return { aoa: rows, delimiter: d };
+}
+
+/* ---------- wykrywanie nagłówka i mapowania ---------- */
+function detectHeaderRow(aoa) {
+  for (var r = 0; r < Math.min(aoa.length, 12); r++) {
+    var cells = aoa[r] || [];
+    var nonEmpty = 0, hasText = false;
+    for (var c = 0; c < cells.length; c++) {
+      var s = String(cells[c]).trim();
+      if (s !== "") nonEmpty++;
+      if (/[a-ząćęłńóśżź]/i.test(s) && !normDT(s)) hasText = true;
+    }
+    if (nonEmpty >= 2 && hasText) return r;
+  }
+  return 0;
+}
+function hourLabelValue(h) {
+  var s = String(h).trim().toLowerCase().replace(/godz\.?\s*/g, "").replace(/^h/, "");
+  var m = s.match(/^(\d{1,2})(?::00)?$/);
+  if (m) { var n = +m[1]; if (n >= 0 && n <= 24) return n; }
+  return null;
+}
+function autoDetect(aoa, headIdx) {
+  var hdr = (aoa[headIdx] || []).map(function (h) { return String(h); });
+  var norm = hdr.map(normHeader);
+  var raw = hdr.map(function (h) { return String(h).toLowerCase(); });
+  function find(re, reRaw) {
+    for (var i = 0; i < norm.length; i++) {
+      if (re.test(norm[i]) || (reRaw && reRaw.test(raw[i]))) return i;
+    }
+    return -1;
+  }
+  var map = {};
+  map.ts = find(/data.*czas|czas.*data|timestamp|datetime|znacznik/);
+  map.date = find(/^data$|^date$|dzien|doba/);
+  map.hour = find(/^godzina$|^godz|^hour|^h$/);
+  map.id = find(/ppe|^id|punkt|licznik|kod ppe|nr ppe/);
+  map.name = find(/nazwa|odbiorca|czlonek|obiekt|opis/);
+  map.pob = find(/pobor|pobrana|zuzycie|import/, /a\+|a \+/);
+  map.odd = find(/oddanie|oddana|wprowadz|eksport|generacja|produkcja/, /a-|a −|a -/);
+  map.dir = find(/kierunek|^typ$|strumien/);
+  map.val = find(/^wartosc|^energia$|^kwh$|ilosc/);
+  var hourCols = [];
+  for (var i = 0; i < hdr.length; i++) {
+    if (i === map.date || i === map.ts) continue;
+    var hv = hourLabelValue(hdr[i]);
+    if (hv !== null) hourCols.push({ col: i, label: hv });
+  }
+  var format = "long";
+  if (hourCols.length >= 20) format = "wide";
+  else if (map.ts >= 0) format = "timestamp";
+  else if (map.date >= 0 && map.hour < 0) {
+    var sample = (aoa[headIdx + 1] || [])[map.date];
+    var dt = normDT(sample);
+    if (dt && dt.hour !== null) { format = "timestamp"; map.ts = map.date; }
+  }
+  if (format === "long" && map.date < 0 && map.ts >= 0) format = "timestamp";
+  return { format: format, map: map, hourCols: hourCols };
+}
+function classifyDir(v) {
+  var s = normHeader(v);
+  if (/odd|wprowadz|eksport|a-|gener|produk/.test(s) || /a-/.test(String(v).toLowerCase())) return "oddanie";
+  if (/pob|zuzy|import|a\+/.test(s) || /a\+/.test(String(v).toLowerCase())) return "pobor";
+  return null;
+}
+
+/* ---------- konwersja pliku ---------- */
+function convertFile(aoa, headIdx, cfg) {
+  var mul = cfg.unitMul || 1;
+  var agg = new Map();
+  var stats = { parsed: 0, rejected: 0, sub60: false, hoursSeen: [] };
+  function put(date, hour, id, name, p, o) {
+    if (!date || !(hour >= 0 && hour <= 23) || !id) { stats.rejected++; return; }
+    var k = date + "|" + pad2(hour) + "|" + id;
+    var e = agg.get(k);
+    if (!e) { e = { date: date, hour: hour, id: id, name: name || id, p: 0, o: 0 }; agg.set(k, e); }
+    if (isFinite(p)) e.p += p * mul;
+    if (isFinite(o)) e.o += o * mul;
+    if (name && e.name === e.id) e.name = name;
+    stats.parsed++;
+  }
+  var rows = [];
+  var m = cfg.map;
+  for (var r = headIdx + 1; r < aoa.length; r++) {
+    var row = aoa[r] || [];
+    var cell = function (i) { return i >= 0 && i < row.length ? row[i] : ""; };
+    if (cfg.format === "long") {
+      var d1 = normDT(cell(m.date));
+      var h1 = num(cell(m.hour));
+      if (!d1 || !isFinite(h1)) { stats.rejected++; continue; }
+      h1 = Math.floor(h1);
+      stats.hoursSeen.push(h1);
+      var id1 = m.id >= 0 ? String(cell(m.id)).trim() : (cfg.constId || "");
+      var nm1 = m.name >= 0 ? String(cell(m.name)).trim() : (cfg.constName || "");
+      var p1 = NaN, o1 = NaN;
+      if (m.dir >= 0 && m.val >= 0) {
+        var dir = classifyDir(cell(m.dir));
+        var v = num(cell(m.val));
+        if (dir === "pobor") p1 = v; else if (dir === "oddanie") o1 = v; else { stats.rejected++; continue; }
+      } else {
+        p1 = m.pob >= 0 ? num(cell(m.pob)) : NaN;
+        o1 = m.odd >= 0 ? num(cell(m.odd)) : NaN;
+        if (cfg.fileDir === "pobor" && m.pob < 0 && m.val >= 0) p1 = num(cell(m.val));
+        if (cfg.fileDir === "oddanie" && m.odd < 0 && m.val >= 0) o1 = num(cell(m.val));
+      }
+      rows.push({ date: d1.date, hourRaw: h1, id: id1, name: nm1, p: p1, o: o1 });
+    } else if (cfg.format === "timestamp") {
+      var dt = normDT(cell(m.ts));
+      if (!dt || dt.hour === null) { stats.rejected++; continue; }
+      if (dt.minute && dt.minute !== 0) stats.sub60 = true;
+      var id2 = m.id >= 0 ? String(cell(m.id)).trim() : (cfg.constId || "");
+      var nm2 = m.name >= 0 ? String(cell(m.name)).trim() : (cfg.constName || "");
+      var p2 = NaN, o2 = NaN;
+      if (m.dir >= 0 && m.val >= 0) {
+        var dir2 = classifyDir(cell(m.dir));
+        var v2 = num(cell(m.val));
+        if (dir2 === "pobor") p2 = v2; else if (dir2 === "oddanie") o2 = v2; else { stats.rejected++; continue; }
+      } else {
+        p2 = m.pob >= 0 ? num(cell(m.pob)) : NaN;
+        o2 = m.odd >= 0 ? num(cell(m.odd)) : NaN;
+        if (cfg.fileDir === "pobor" && m.pob < 0 && m.val >= 0) p2 = num(cell(m.val));
+        if (cfg.fileDir === "oddanie" && m.odd < 0 && m.val >= 0) o2 = num(cell(m.val));
+      }
+      var hh = dt.hour;
+      if (hh === 24) hh = 0;
+      put(dt.date, hh, id2, nm2, p2, o2);
+      continue;
+    } else {
+      var d3 = normDT(cell(m.date));
+      if (!d3) { stats.rejected++; continue; }
+      var id3 = m.id >= 0 ? String(cell(m.id)).trim() : (cfg.constId || "");
+      var nm3 = m.name >= 0 ? String(cell(m.name)).trim() : (cfg.constName || "");
+      var dir3 = cfg.fileDir;
+      if (m.dir >= 0) { var cd = classifyDir(cell(m.dir)); if (cd) dir3 = cd; }
+      for (var q = 0; q < cfg.hourCols.length; q++) {
+        var hc = cfg.hourCols[q];
+        var v3 = num(cell(hc.col));
+        if (!isFinite(v3)) continue;
+        var h3 = hc.label;
+        stats.hoursSeen.push(h3);
+        rows.push({ date: d3.date, hourRaw: h3, id: id3, name: nm3, p: dir3 === "oddanie" ? NaN : (dir3 === "pobor" || dir3 === "both" ? v3 : NaN), o: dir3 === "oddanie" ? v3 : NaN });
+      }
+      continue;
+    }
+  }
+  var minus = 0;
+  if (rows.length) {
+    if (cfg.hourConv === "1") minus = 1;
+    else if (cfg.hourConv === "auto") {
+      var mn = Infinity, mx = -Infinity;
+      stats.hoursSeen.forEach(function (h) { if (h < mn) mn = h; if (h > mx) mx = h; });
+      if (mn >= 1 && mx >= 24) minus = 1;
+    }
+    rows.forEach(function (rr) { put(rr.date, rr.hourRaw - minus, rr.id, rr.name, rr.p, rr.o); });
+  }
+  var out = [];
+  agg.forEach(function (e) { out.push({ date: e.date, hour: e.hour, id: e.id, name: e.name, pobor: e.p, oddanie: e.o }); });
+  out.sort(function (a, b) { return (a.date + pad2(a.hour) + a.id) < (b.date + pad2(b.hour) + b.id) ? -1 : 1; });
+  stats.out = out.length;
+  return { rows: out, stats: stats };
+}
+
+/* ---------- technologie i rejestr ---------- */
+var TECHS = [
+  { k: "pv", l: "Fotowoltaika", oze: true },
+  { k: "wiatr", l: "Elektrownia wiatrowa", oze: true },
+  { k: "hydro", l: "Elektrownia wodna", oze: true },
+  { k: "biogaz", l: "Biogazownia", oze: true },
+  { k: "biomasa", l: "Biomasa", oze: true },
+  { k: "chp_gaz", l: "Kogeneracja gazowa (nie-OZE)", oze: false },
+  { k: "inne_oze", l: "Inne OZE", oze: true },
+  { k: "inne_nieoze", l: "Inne nie-OZE", oze: false }
+];
+function techInfo(k) {
+  for (var i = 0; i < TECHS.length; i++) if (TECHS[i].k === k) return TECHS[i];
+  return { k: k, l: k, oze: true };
+}
+function newPoint(id, name) {
+  return { id: id, name: name || id, owner: name || id, role: "auto", tariff: "", cEnergia: null, cDystr: null, cZwol: null, fixedMonthly: 0, sources: [] };
+}
+function newSource() { return { tech: "pv", power: 0, mode: "shared", meterId: "", sharePct: null }; }
+
+/* rozbicie generacji punktu na grupy OZE/GAS i technologie */
+function pointGroupKey(techK) { return techInfo(techK).oze ? "OZE" : "GAS"; }
+
+/* ---------- walidacja ---------- */
+function validateData(rows, meta, reg) {
+  var issues = [];
+  function add(l, t) { issues.push({ level: l, text: t }); }
+  if (!rows.length) { add("err", "Brak danych wejściowych w wybranym okresie."); return { issues: issues, status: "err" }; }
+  var negClamped = 0;
+  rows.forEach(function (r) {
+    if (r.pobor < 0) { r.pobor = 0; negClamped++; }
+    if (r.oddanie < 0) { r.oddanie = 0; negClamped++; }
+  });
+  var dates = {}, ids = {};
+  rows.forEach(function (r) { dates[r.date] = 1; ids[r.id] = 1; });
+  var dList = Object.keys(dates).sort();
+  var mList = Object.keys(ids);
+  var expected = dList.length * 24;
+  var seen = {}, dup = 0;
+  rows.forEach(function (r) {
+    var k = r.id + "|" + r.date + "|" + r.hour;
+    if (seen[k]) dup++; else seen[k] = 1;
+  });
+  var missing = [];
+  mList.forEach(function (id) {
+    var have = 0;
+    for (var k in seen) if (k.indexOf(id + "|") === 0) have++;
+    if (have < expected) missing.push({ id: id, brak: expected - have });
+  });
+  add("info", "Zakres danych: " + dList[0] + " – " + dList[dList.length - 1] + " (" + dList.length + " dni), " + mList.length + " punktów pomiarowych, " + fmt(rows.length) + " rekordów godzinowych.");
+  if (meta && meta.rejected > 0) add("warn", "Pominięto " + fmt(meta.rejected) + " wierszy z niepoprawną datą, godziną, identyfikatorem lub kierunkiem — sprawdź mapowanie kolumn w kreatorze importu.");
+  if (missing.length) {
+    var tot = 0; missing.forEach(function (x) { tot += x.brak; });
+    missing.sort(function (a, b) { return b.brak - a.brak; });
+    var top = missing.slice(0, 3).map(function (x) { return x.id + ": " + x.brak + " h"; }).join(", ");
+    add("warn", "Niekompletne szeregi godzinowe — brakuje łącznie " + fmt(tot) + " godzin u " + missing.length + " punktów (najwięcej: " + top + "). Brakujące godziny traktowane są jako 0 kWh.");
+  } else {
+    add("info", "Kompletność: każdy punkt ma pełny szereg godzinowy w zakresie danych.");
+  }
+  if (dup > 0) add("warn", "Wykryto " + fmt(dup) + " nakładających się rekordów (ta sama data, godzina i punkt) — wartości zostały zsumowane.");
+  if (negClamped > 0) add("warn", "Skorygowano " + fmt(negClamped) + " wartości ujemnych do 0 kWh — zweryfikuj konwencję znaków w pliku źródłowym.");
+  if (meta && meta.sub60) add("info", "Wykryto dane o rozdzielczości krótszej niż 60 minut — zostały zsumowane do pełnych godzin.");
+  var oddSum = 0; rows.forEach(function (r) { oddSum += r.oddanie; });
+  if (oddSum <= 0) add("err", "Brak energii wprowadzonej do sieci (oddanie = 0 we wszystkich rekordach) — sprawdź, czy wczytano pliki z danymi wytwórczymi (A−).");
+
+  /* kontrole rejestru i źródeł */
+  if (reg) {
+    var meterIds = {};
+    var ozePower = 0;
+    var genById = {}, peakById = {};
+    rows.forEach(function (r) {
+      genById[r.id] = (genById[r.id] || 0) + r.oddanie;
+      if (r.oddanie > (peakById[r.id] || 0)) peakById[r.id] = r.oddanie;
+    });
+    var noSrc = [], badShare = [], missMeter = [], overPeak = [];
+    reg.points.forEach(function (pt) {
+      var shareSum = 0, shareCnt = 0, power = 0, powerOwn = 0;
+      pt.sources.forEach(function (s) {
+        var ti = techInfo(s.tech);
+        if (ti.oze) ozePower += (s.power || 0);
+        power += (s.power || 0);
+        if (s.mode === "meter") {
+          if (s.meterId) { meterIds[s.meterId] = 1; if (genById[s.meterId] === undefined) missMeter.push(pt.id + " → " + s.meterId); }
+        } else {
+          powerOwn += (s.power || 0);
+          if (s.sharePct !== null && isFinite(s.sharePct)) { shareSum += s.sharePct; shareCnt++; }
+        }
+      });
+      if (shareCnt > 0 && Math.abs(shareSum - 100) > 0.5) badShare.push(pt.id + " (" + fmt(shareSum, 1) + "%)");
+      if ((genById[pt.id] || 0) > 1 && !pt.sources.some(function (s) { return s.mode === "shared"; })) noSrc.push(pt.id);
+      var peak = peakById[pt.id] || 0;
+      if (powerOwn > 0 && peak > powerOwn * 1.15) overPeak.push(pt.id + " (szczyt " + fmt(peak, 1) + " kWh/h vs moc " + fmt(powerOwn, 0) + " kW)");
+    });
+    if (noSrc.length) add("warn", "Punkty z produkcją bez skonfigurowanego źródła na wspólnym liczniku: " + noSrc.slice(0, 5).join(", ") + (noSrc.length > 5 ? "…" : "") + " — produkcja zostanie domyślnie zaliczona do OZE; uzupełnij rejestr źródeł.");
+    if (badShare.length) add("warn", "Udziały % źródeł nie sumują się do 100: " + badShare.join(", ") + " — udziały zostaną znormalizowane.");
+    if (missMeter.length) add("warn", "Źródła z osobnym szeregiem bez danych pomiarowych: " + missMeter.join(", ") + " — sprawdź ID podlicznika lub wczytaj jego plik.");
+    if (overPeak.length) add("warn", "Godzinowa produkcja przekracza moc zainstalowaną źródeł wspólnego licznika: " + overPeak.join("; ") + " — zweryfikuj moce w rejestrze lub jednostki danych.");
+    if (ozePower > 1000) add("info", "Łączna moc zainstalowana źródeł OZE: " + fmt(ozePower, 0) + " kW (> 1 MW) — zweryfikuj warunki zwolnienia z akcyzy dla instalacji spółdzielni.");
+  }
+  var status = issues.some(function (i) { return i.level === "err"; }) ? "err"
+    : issues.some(function (i) { return i.level === "warn"; }) ? "warn" : "ok";
+  return { issues: issues, status: status };
+}
+
+/* ---------- silnik rozliczeniowy v0.5 ---------- */
+/* reg: {mode:'combined'|'separated', points:[...]}; prm: ceny domyślne + opust + magazyn + cWewnGas + cSellGas */
+function runEngine(rows, prm, reg) {
+  var mode = reg && reg.mode === "separated" ? "separated" : "combined";
+  var ptCfg = new Map();
+  var meterOwner = new Map(); /* meterId -> {pid, tech} */
+  (reg ? reg.points : []).forEach(function (pt) {
+    ptCfg.set(pt.id, pt);
+    pt.sources.forEach(function (s) {
+      if (s.mode === "meter" && s.meterId) meterOwner.set(s.meterId, { pid: pt.id, tech: s.tech });
+    });
+  });
+  var members = new Map(), hourSet = new Set();
+  function ensure(pid, name) {
+    if (!members.has(pid)) {
+      var cfg = ptCfg.get(pid);
+      members.set(pid, { id: pid, name: (cfg && cfg.name) || name || pid, data: new Map() });
+    }
+    return members.get(pid);
+  }
+  function cellAt(mm, k) {
+    var c = mm.data.get(k);
+    if (!c) { c = { p: 0, oShared: 0, gen: { OZE: 0, GAS: 0 }, tech: {} }; mm.data.set(k, c); }
+    return c;
+  }
+  rows.forEach(function (r) {
+    var k = r.date + "|" + pad2(r.hour);
+    hourSet.add(k);
+    var mo = meterOwner.get(r.id);
+    if (mo) {
+      var mm = ensure(mo.pid);
+      var c = cellAt(mm, k);
+      c.p += r.pobor; /* pobór podlicznika (potrzeby własne źródła) doliczany do punktu */
+      var g = pointGroupKey(mo.tech);
+      c.gen[g] += r.oddanie;
+      c.tech[mo.tech] = (c.tech[mo.tech] || 0) + r.oddanie;
+    } else {
+      var mm2 = ensure(r.id, r.name);
+      var c2 = cellAt(mm2, k);
+      c2.p += r.pobor;
+      c2.oShared += r.oddanie;
+      if (r.name && mm2.name === mm2.id) mm2.name = r.name;
+    }
+  });
+  /* podział wspólnego licznika na źródła */
+  members.forEach(function (mm) {
+    var cfg = ptCfg.get(mm.id);
+    var shared = cfg ? cfg.sources.filter(function (s) { return s.mode === "shared"; }) : [];
+    var wsum = 0, weights = shared.map(function (s) {
+      var w = (s.sharePct !== null && isFinite(s.sharePct)) ? s.sharePct : (s.power || 0);
+      wsum += w; return w;
+    });
+    mm.data.forEach(function (c) {
+      var s0 = c.oShared;
+      if (s0 <= 0) return;
+      if (!shared.length || wsum <= 0) {
+        c.gen.OZE += s0;
+        c.tech["nieskonfigurowane"] = (c.tech["nieskonfigurowane"] || 0) + s0;
+      } else {
+        shared.forEach(function (s, i) {
+          var part = s0 * weights[i] / wsum;
+          c.gen[pointGroupKey(s.tech)] += part;
+          c.tech[s.tech] = (c.tech[s.tech] || 0) + part;
+        });
+      }
+    });
+  });
+  /* tryb łączny: cała generacja jako grupa OZE */
+  if (mode === "combined") {
+    members.forEach(function (mm) {
+      mm.data.forEach(function (c) { c.gen.OZE += c.gen.GAS; c.gen.GAS = 0; });
+    });
+  }
+  var keys = Array.from(hourSet).sort();
+  var storage = prm.magazynStart;
+  var acc = new Map();
+  members.forEach(function (mm) {
+    acc.set(mm.id, { id: mm.id, name: mm.name, pobor: 0, oddanie: 0, intOZE: 0, intGAS: 0, fromStorage: 0, fromSeller: 0, toStorage: 0, sold: 0, delOZE: 0, delGAS: 0 });
+  });
+  var coopHourly = [], detail = new Map(), techProd = {}, months = {};
+  keys.forEach(function (k) {
+    var parts = k.split("|"), date = parts[0], hour = +parts[1];
+    months[date.slice(0, 7)] = 1;
+    var deficits = [], posSum = 0;
+    var surOZE = [], surGAS = [], negO = 0, negG = 0;
+    var pTot = 0, oTot = 0;
+    var dmap = new Map();
+    members.forEach(function (mm) {
+      var c = mm.data.get(k) || { p: 0, gen: { OZE: 0, GAS: 0 }, tech: {} };
+      var genTot = c.gen.OZE + c.gen.GAS;
+      pTot += c.p; oTot += genTot;
+      for (var tk in c.tech) techProd[tk] = (techProd[tk] || 0) + c.tech[tk];
+      var a = acc.get(mm.id);
+      a.pobor += c.p; a.oddanie += genTot;
+      dmap.set(mm.id, { p: c.p, o: genTot, intO: 0, intG: 0, sto: 0, sel: 0, dep: 0, sold: 0, delO: 0, delG: 0 });
+      var bal = c.p - genTot;
+      if (bal > 1e-9) { deficits.push({ id: mm.id, v: bal }); posSum += bal; }
+      else if (bal < -1e-9) {
+        var S = -bal;
+        var sO = genTot > 0 ? S * c.gen.OZE / genTot : S;
+        var sG = S - sO;
+        if (sO > 1e-12) { surOZE.push({ id: mm.id, v: sO }); negO += sO; }
+        if (sG > 1e-12) { surGAS.push({ id: mm.id, v: sG }); negG += sG; }
+      }
+    });
+    var intO = Math.min(posSum, negO);
+    var rem = posSum - intO;
+    var intG = Math.min(rem, negG);
+    rem -= intG;
+    var fromStorage = Math.min(rem, storage);
+    storage -= fromStorage;
+    var fromSeller = rem - fromStorage;
+    var depO = Math.max(0, negO - intO);
+    storage += depO * prm.opust;
+    var soldG = Math.max(0, negG - intG);
+    deficits.forEach(function (x) {
+      var w = posSum > 0 ? x.v / posSum : 0;
+      var a = acc.get(x.id), dd = dmap.get(x.id);
+      a.intOZE += intO * w; dd.intO = intO * w;
+      a.intGAS += intG * w; dd.intG = intG * w;
+      a.fromStorage += fromStorage * w; dd.sto = fromStorage * w;
+      a.fromSeller += fromSeller * w; dd.sel = fromSeller * w;
+    });
+    surOZE.forEach(function (x) {
+      var w = negO > 0 ? x.v / negO : 0;
+      acc.get(x.id).toStorage += depO * w * prm.opust;
+      acc.get(x.id).delOZE += intO * w;
+      dmap.get(x.id).dep = depO * w;
+      dmap.get(x.id).delO = intO * w;
+    });
+    surGAS.forEach(function (x) {
+      var w = negG > 0 ? x.v / negG : 0;
+      acc.get(x.id).sold += soldG * w;
+      acc.get(x.id).delGAS += intG * w;
+      dmap.get(x.id).sold = soldG * w;
+      dmap.get(x.id).delG = intG * w;
+    });
+    detail.set(k, dmap);
+    coopHourly.push({ key: k, date: date, hour: hour, pobor: pTot, oddanie: oTot, net: pTot - oTot, intOZE: intO, intGAS: intG, fromStorage: fromStorage, fromSeller: fromSeller, deposited: depO, sold: soldG, storage: storage });
+  });
+  var monthsN = Object.keys(months).length;
+  var cWG = isFinite(prm.cWewnGas) ? prm.cWewnGas : 0;
+  var cSG = isFinite(prm.cSellGas) ? prm.cSellGas : 0;
+  var memberResults = [];
+  acc.forEach(function (a) {
+    var cfg = ptCfg.get(a.id) || {};
+    var cEn = cfg.cEnergia !== null && cfg.cEnergia !== undefined && isFinite(cfg.cEnergia) ? cfg.cEnergia : prm.cEnergia;
+    var cDy = cfg.cDystr !== null && cfg.cDystr !== undefined && isFinite(cfg.cDystr) ? cfg.cDystr : prm.cDystr;
+    var cZw = cfg.cZwol !== null && cfg.cZwol !== undefined && isFinite(cfg.cZwol) ? cfg.cZwol : prm.cZwol;
+    var fixed = (cfg.fixedMonthly || 0) * monthsN;
+    var full = cEn + cDy + cZw;
+    var eOZE = a.intOZE + a.fromStorage;
+    var eGAS = a.intGAS;
+    var kosztSE = a.fromSeller * full + eOZE * prm.cWewn + eGAS * (cWG + cDy + cZw) + fixed;
+    var kosztBez = a.pobor * full + fixed;
+    var przychod = a.delOZE * prm.cWewn + a.delGAS * cWG + a.sold * cSG;
+    var role = cfg.role && cfg.role !== "auto" ? cfg.role
+      : (a.oddanie > 1 && a.pobor > 1 ? "prosument" : a.oddanie > 1 ? "wytwórca" : "odbiorca");
+    memberResults.push(Object.assign({}, a, {
+      owner: cfg.owner || a.name, role: role, tariff: cfg.tariff || "",
+      eOZE: eOZE, eGAS: eGAS, kosztSE: kosztSE, kosztBez: kosztBez, oszcz: kosztBez - kosztSE, przychod: przychod, fixed: fixed,
+      cEnEff: cEn, cDyEff: cDy, cZwEff: cZw
+    }));
+  });
+  memberResults.sort(function (x, y) { return y.pobor - x.pobor; });
+  var T = { pobor: 0, oddanie: 0, intOZE: 0, intGAS: 0, fromStorage: 0, fromSeller: 0, toStorage: 0, sold: 0, oszcz: 0, kosztSE: 0, kosztBez: 0, przychod: 0 };
+  memberResults.forEach(function (mres) {
+    T.pobor += mres.pobor; T.oddanie += mres.oddanie; T.intOZE += mres.intOZE; T.intGAS += mres.intGAS;
+    T.fromStorage += mres.fromStorage; T.fromSeller += mres.fromSeller; T.toStorage += mres.toStorage; T.sold += mres.sold;
+    T.oszcz += mres.oszcz; T.kosztSE += mres.kosztSE; T.kosztBez += mres.kosztBez; T.przychod += mres.przychod;
+  });
+  /* podsumowanie wg członków (właścicieli) */
+  var ownersMap = new Map();
+  memberResults.forEach(function (m) {
+    var o = ownersMap.get(m.owner);
+    if (!o) { o = { owner: m.owner, points: 0, pobor: 0, oddanie: 0, eOZE: 0, eGAS: 0, fromSeller: 0, kosztSE: 0, kosztBez: 0, oszcz: 0, przychod: 0 }; ownersMap.set(m.owner, o); }
+    o.points++; o.pobor += m.pobor; o.oddanie += m.oddanie; o.eOZE += m.eOZE; o.eGAS += m.eGAS;
+    o.fromSeller += m.fromSeller; o.kosztSE += m.kosztSE; o.kosztBez += m.kosztBez; o.oszcz += m.oszcz; o.przychod += m.przychod;
+  });
+  var owners = Array.from(ownersMap.values()).sort(function (a, b) { return b.pobor - a.pobor; });
+  var days = [];
+  coopHourly.forEach(function (r) { if (days.indexOf(r.date) < 0) days.push(r.date); });
+  days.sort();
+  return { memberResults: memberResults, owners: owners, coopHourly: coopHourly, detail: detail, totals: T, days: days, storageEnd: storage, techProd: techProd, months: monthsN, mode: mode };
+}
+
+/* ---------- porównanie ---------- */
+var METRICS = [
+  { k: "pobor_kwh", l: "Pobór [kWh]", get: function (m) { return m.pobor; }, d: 1, abs: 0.5 },
+  { k: "oddanie_kwh", l: "Wprowadzenie [kWh]", get: function (m) { return m.oddanie; }, d: 1, abs: 0.5 },
+  { k: "energia_oze_kwh", l: "Energia SE OZE [kWh]", get: function (m) { return m.eOZE; }, d: 1, abs: 0.5 },
+  { k: "energia_nieoze_kwh", l: "Energia nie-OZE [kWh]", get: function (m) { return m.eGAS; }, d: 1, abs: 0.5 },
+  { k: "z_magazynu_kwh", l: "Z magazynu [kWh]", get: function (m) { return m.fromStorage; }, d: 1, abs: 0.5 },
+  { k: "od_sprzedawcy_kwh", l: "Od sprzedawcy [kWh]", get: function (m) { return m.fromSeller; }, d: 1, abs: 0.5 },
+  { k: "do_magazynu_kwh", l: "Do magazynu [kWh]", get: function (m) { return m.toStorage; }, d: 1, abs: 0.5 },
+  { k: "sprzedaz_nadwyzki_kwh", l: "Sprzedaż nadwyżki [kWh]", get: function (m) { return m.sold; }, d: 1, abs: 0.5 },
+  { k: "koszt_w_se_zl", l: "Koszt w SE [zł]", get: function (m) { return m.kosztSE; }, d: 2, abs: 0.05 },
+  { k: "przychod_zl", l: "Przychód wytwórcy [zł]", get: function (m) { return m.przychod; }, d: 2, abs: 0.05 },
+  { k: "oszczednosc_zl", l: "Oszczędność [zł]", get: function (m) { return m.oszcz; }, d: 2, abs: 0.05 }
+];
+function compareResults(memberResults, ext, tolPct) {
+  var out = [], compared = 0;
+  var byId = new Map(memberResults.map(function (m) { return [m.id, m]; }));
+  memberResults.forEach(function (m) {
+    var e = ext.map.get(m.id);
+    if (!e) { out.push({ id: m.id, name: m.name, metric: "—", tool: null, ext: null, diff: null, ok: false, note: "brak punktu w danych zewnętrznych" }); return; }
+    METRICS.forEach(function (mt) {
+      var ev = e[mt.k];
+      if (!isFinite(ev)) return;
+      compared++;
+      var tv = mt.get(m), diff = tv - ev;
+      var ok = Math.abs(diff) <= mt.abs || Math.abs(diff) <= (tolPct / 100) * Math.max(Math.abs(ev), 1e-9);
+      out.push({ id: m.id, name: m.name, metric: mt.l, tool: tv, ext: ev, diff: diff, d: mt.d, ok: ok, note: "" });
+    });
+  });
+  ext.map.forEach(function (_e, id) {
+    if (!byId.has(id)) out.push({ id: id, name: "?", metric: "—", tool: null, ext: null, diff: null, ok: false, note: "punkt z danych zewnętrznych nieobecny w narzędziu" });
+  });
+  var bad = out.filter(function (r) { return !r.ok; }).length;
+  return { rows: out, compared: compared, bad: bad };
+}
+
+/* ---------- konfigurowalny widok wyników ---------- */
+var ELEMS = [
+  { k: "p", l: "Pobór [kWh]", d: 1 },
+  { k: "o", l: "Generacja [kWh]", d: 1 },
+  { k: "intO", l: "Wymiana OZE [kWh]", d: 1 },
+  { k: "intG", l: "Energia nie-OZE [kWh]", d: 1 },
+  { k: "sto", l: "Z magazynu [kWh]", d: 1 },
+  { k: "sel", l: "Od sprzedawcy [kWh]", d: 1 },
+  { k: "depC", l: "Do magazynu po opuście [kWh]", d: 1 },
+  { k: "sold", l: "Sprzedaż nadwyżki [kWh]", d: 1 },
+  { k: "koszt", l: "Koszt w SE [zł]", d: 2, money: true },
+  { k: "kosztBez", l: "Koszt poza SE [zł]", d: 2, money: true },
+  { k: "oszcz", l: "Oszczędność [zł]", d: 2, money: true },
+  { k: "przych", l: "Przychód wytwórcy [zł]", d: 2, money: true }
+];
+/* vc: { from, to, gran: 'hour'|'day'|'month'|'total', mode: 'coop'|'owners'|'points', ids: []|null } */
+function aggregateView(R, prm, vc) {
+  var cWG = isFinite(prm.cWewnGas) ? prm.cWewnGas : 0;
+  var cSG = isFinite(prm.cSellGas) ? prm.cSellGas : 0;
+  var selSet = vc.ids && vc.ids.length ? {} : null;
+  if (selSet) vc.ids.forEach(function (x) { selSet[x] = 1; });
+  var nameById = {};
+  R.memberResults.forEach(function (m) { nameById[m.id] = m.name; });
+  function bucketOf(date, hour) {
+    if (vc.gran === "hour") return date + " " + pad2(hour) + ":00";
+    if (vc.gran === "day") return date;
+    if (vc.gran === "month") return date.slice(0, 7);
+    return "Suma okresu";
+  }
+  var out = new Map();
+  R.coopHourly.forEach(function (row) {
+    if (vc.from && row.date < vc.from) return;
+    if (vc.to && row.date > vc.to) return;
+    var dm = R.detail.get(row.key);
+    if (!dm) return;
+    var bucket = bucketOf(row.date, row.hour);
+    R.memberResults.forEach(function (m) {
+      var d = dm.get(m.id);
+      if (!d) return;
+      var entKey, entLbl;
+      if (vc.mode === "coop") { entKey = "__coop"; entLbl = "Spółdzielnia (razem)"; }
+      else if (vc.mode === "owners") { entKey = m.owner; entLbl = m.owner; }
+      else { entKey = m.id; entLbl = m.name + " (" + m.id + ")"; }
+      if (selSet && vc.mode !== "coop" && !selSet[entKey]) return;
+      var full = m.cEnEff + m.cDyEff + m.cZwEff;
+      var koszt = d.sel * full + (d.intO + d.sto) * prm.cWewn + d.intG * (cWG + m.cDyEff + m.cZwEff);
+      var kosztBez = d.p * full;
+      var v = {
+        p: d.p, o: d.o, intO: d.intO, intG: d.intG, sto: d.sto, sel: d.sel,
+        depC: d.dep * prm.opust, sold: d.sold,
+        koszt: koszt, kosztBez: kosztBez, oszcz: kosztBez - koszt,
+        przych: d.delO * prm.cWewn + d.delG * cWG + d.sold * cSG
+      };
+      var kk = bucket + "\u0001" + entKey;
+      var e = out.get(kk);
+      if (!e) {
+        e = { bucket: bucket, entity: entLbl, vals: {} };
+        ELEMS.forEach(function (el) { e.vals[el.k] = 0; });
+        out.set(kk, e);
+      }
+      ELEMS.forEach(function (el) { e.vals[el.k] += v[el.k]; });
+    });
+  });
+  var rows = Array.from(out.values()).sort(function (a, b) {
+    if (a.bucket !== b.bucket) return a.bucket.localeCompare(b.bucket, "pl");
+    return a.entity.localeCompare(b.entity, "pl");
+  });
+  var totals = {};
+  ELEMS.forEach(function (el) { totals[el.k] = 0; });
+  rows.forEach(function (r) { ELEMS.forEach(function (el) { totals[el.k] += r.vals[el.k]; }); });
+  return { rows: rows, totals: totals };
+}
+
+/* ---------- dane demo ---------- */
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = (a + 0x6D2B79F5) | 0;
+    var t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+function generateDemo() {
+  var rng = mulberry32(20260601), days = 30;
+  var cloud = []; for (var i = 0; i < days; i++) cloud.push(0.45 + rng() * 0.55);
+  function pvShape(h) { var x = (h - 4.5) / 16.5; return x <= 0 || x >= 1 ? 0 : Math.pow(Math.sin(Math.PI * x), 1.4); }
+  var rows = [];
+  function push(d, h, id, name, p, o) {
+    rows.push({ date: "2026-06-" + pad2(d), hour: h, id: id, name: name, pobor: Math.max(0, p), oddanie: Math.max(0, o) });
+  }
+  for (var d = 1; d <= days; d++) {
+    var dow = new Date(2026, 5, d).getDay(), wknd = dow === 0 || dow === 6, cl = cloud[d - 1];
+    for (var h = 0; h < 24; h++) {
+      var n = function () { return (rng() - 0.5) * 1.6; };
+      var pv = pvShape(h) * cl;
+      push(d, h, "M1", "Urząd Gminy", 3 + (!wknd && h >= 8 && h <= 15 ? 13 + n() : n() * 0.4), 0);
+      var wak = d >= 27;
+      push(d, h, "M2", "Szkoła Podstawowa", 2.5 + (!wknd && !wak && h >= 7 && h <= 15 ? 19 + n() : n() * 0.3), 0);
+      push(d, h, "M3", "Oczyszczalnia ścieków", 18 + n() * 2, 0);
+      push(d, h, "M4", "Stacja uzdatniania wody", 8 + ((h >= 6 && h <= 9) || (h >= 18 && h <= 21) ? 8 + n() : n()), 0);
+      push(d, h, "M5", "Piekarnia „Kłos”", 3 + (h >= 2 && h <= 8 ? 17 + n() : n() * 0.5), 0);
+      push(d, h, "M6", "Gospodarstwo rolne A (PV 50 kWp)", 2 + ((h >= 5 && h <= 7) || (h >= 17 && h <= 20) ? 5 + n() : n() * 0.4), pv * 50 * 0.82);
+      push(d, h, "M7", "Gospodarstwo rolne B", 4 + ((h >= 5 && h <= 8) || (h >= 17 && h <= 21) ? 6 + n() : n() * 0.5), 0);
+      var serwis = d === 12;
+      push(d, h, "M8", "Instalacja SE: PV 150 kWp + biogaz 40 kW", 0.5, pv * 150 * 0.93 + (serwis ? 0 : 36 + n() * 2));
+      push(d, h, "M9", "Kogeneracja gazowa 60 kW (nie-OZE)", 1.2, (h >= 6 && h <= 21 ? 52 + n() * 3 : 20 + n() * 2));
+    }
+  }
+  return rows;
+}
+function demoRegistry() {
+  var pts = [];
+  function pt(id, name, owner, role, tariff, srcs, fixed) {
+    var p = newPoint(id, name); p.owner = owner || name; p.role = role || "auto"; p.tariff = tariff || "";
+    p.fixedMonthly = fixed || 0; p.sources = srcs || [];
+    return p;
+  }
+  pts.push(pt("M1", "Urząd Gminy", "Gmina", "odbiorca", "C21", [], 45));
+  pts.push(pt("M2", "Szkoła Podstawowa", "Gmina", "odbiorca", "C21", [], 45));
+  pts.push(pt("M3", "Oczyszczalnia ścieków", "ZGK", "odbiorca", "B21", [], 120));
+  pts.push(pt("M4", "Stacja uzdatniania wody", "ZGK", "odbiorca", "C21", [], 45));
+  pts.push(pt("M5", "Piekarnia „Kłos”", "Piekarnia „Kłos”", "odbiorca", "C11", [], 30));
+  pts.push(pt("M6", "Gospodarstwo rolne A", "Gospodarstwo rolne A", "prosument", "C11",
+    [{ tech: "pv", power: 50, mode: "shared", meterId: "", sharePct: null }], 30));
+  pts.push(pt("M7", "Gospodarstwo rolne B", "Gospodarstwo rolne B", "odbiorca", "C11", [], 30));
+  pts.push(pt("M8", "Instalacja SE (PV + biogaz)", "Spółdzielnia", "wytwórca", "B21",
+    [{ tech: "pv", power: 150, mode: "shared", meterId: "", sharePct: null },
+     { tech: "biogaz", power: 40, mode: "shared", meterId: "", sharePct: null }], 120));
+  pts.push(pt("M9", "Kogeneracja gazowa", "Spółdzielnia", "wytwórca", "B21",
+    [{ tech: "chp_gaz", power: 60, mode: "shared", meterId: "", sharePct: null }], 120));
+  return { mode: "separated", points: pts };
+}
+/*CORE-END*/
+
+/* ================================================================
+   WARSTWA UI (przeglądarka)
+   ================================================================ */
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var HAS_XLSX = function () { return typeof XLSX !== "undefined"; };
+
+  var debounceTimer = null;
+  function debounceRecompute(ms) {
+    if (debounceTimer) clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(function () {
+      debounceTimer = null;
+      recompute();
+    }, ms || 250);
+  }
+
+  var state = {
+    rows: generateDemo(),
+    meta: { rejected: 0, sub60: false },
+    prm: { opust: 0.6, magazynStart: 0, cEnergia: 0.62, cDystr: 0.28, cZwol: 0.14, cWewn: 0.45, cWewnGas: 0.55, cSellGas: 0.30 },
+    reg: demoRegistry(),
+    dateFrom: "", dateTo: "",
+    day: null, stepsWho: "__coop",
+    view: { from: "", to: "", gran: "day", mode: "coop", sel: {}, elems: { p: 1, o: 1, intO: 1, intG: 1, sto: 1, sel: 1, oszcz: 1 } },
+    ext: null, tolPct: 1, showAll: false,
+    R: null, V: null
+  };
+
+  /* ---------- konfiguracja: autozapis + JSON ---------- */
+  function saveCfg() {
+    try { localStorage.setItem("bilansSE_cfg_v05", JSON.stringify({ prm: state.prm, reg: state.reg, dateFrom: state.dateFrom, dateTo: state.dateTo, view: state.view })); } catch (e) { /* brak dostępu */ }
+  }
+  function loadCfg() {
+    try {
+      var s = localStorage.getItem("bilansSE_cfg_v05") || localStorage.getItem("bilansSE_cfg_v04");
+      if (!s) return;
+      var o = JSON.parse(s);
+      if (o && o.prm && o.reg && Array.isArray(o.reg.points)) {
+        state.prm = Object.assign(state.prm, o.prm);
+        state.reg = o.reg;
+        state.dateFrom = o.dateFrom || ""; state.dateTo = o.dateTo || "";
+        if (o.view) state.view = Object.assign(state.view, o.view);
+      }
+    } catch (e) { /* zignoruj */ }
+  }
+  function applyCfgJson(o) {
+    if (!o || !o.reg || !Array.isArray(o.reg.points)) { showErr("Nieprawidłowy plik konfiguracji."); return; }
+    state.prm = Object.assign(state.prm, o.prm || {});
+    state.reg = o.reg;
+    state.dateFrom = o.dateFrom || ""; state.dateTo = o.dateTo || "";
+    if (o.view) state.view = Object.assign(state.view, o.view);
+    syncPrmInputs(); saveCfg(); recompute();
+  }
+
+  /* ---------- pobieranie i zapisywanie plików ---------- */
+  var dirHandle = null;
+
+  async function selectDirectory() {
+    if (!window.isSecureContext || !window.showDirectoryPicker) {
+      showErr("Automatyczny dostęp do wybranego folderu (File System Access) wymaga bezpiecznego połączenia (localhost/HTTPS). W trybie pliku lokalnego (file://) przeglądarka zapisuje pliki do wskazanego podfolderu z unikalnym znacznikiem czasu.");
+      return;
+    }
+    try {
+      dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' });
+      $("dirStatus").textContent = "✓ Folder: " + dirHandle.name;
+      showErr("");
+    } catch (err) {
+      if (err.name !== 'AbortError') {
+        showErr("Nie udało się uzyskać uprawnień do folderu: " + err.message);
+      }
+    }
+  }
+
+  async function downloadBlob(name, blob) {
+    var parts = name.split('.');
+    var ext = parts.pop();
+    var baseName = parts.join('.');
+    var d = new Date();
+    var timestamp = d.getFullYear() + "" + pad2(d.getMonth() + 1) + "" + pad2(d.getDate()) + "_" + pad2(d.getHours()) + "" + pad2(d.getMinutes()) + "" + pad2(d.getSeconds());
+    var uniqueName = baseName + "_" + timestamp + "." + ext;
+
+    if (dirHandle) {
+      try {
+        var fileHandle = await dirHandle.getFileHandle(uniqueName, { create: true });
+        var writable = await fileHandle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return;
+      } catch (err) {
+        showErr("Błąd zapisu do wybranego folderu. Przełączono na pobieranie standardowe.");
+      }
+    }
+    fallbackDownload(uniqueName, blob);
+  }
+
+  function fallbackDownload(name, blob) {
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "BilansSE_Wyniki/" + name;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 500);
+  }
+
+  function downloadCsv(name, headers, rows) {
+    var e2 = function (v) { return String(v).replace(".", ","); };
+    var body = rows.map(function (r) { return r.map(e2).join(";"); }).join("\n");
+    downloadBlob(name, new Blob(["\uFEFF" + headers.join(";") + "\n" + body], { type: "text/csv;charset=utf-8;" }));
+  }
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function showErr(t) { var b = $("errBox"); if (!t) { b.classList.add("hide"); return; } b.textContent = t; b.classList.remove("hide"); }
+
+  /* ---------- filtr okresu ---------- */
+  function filteredRows() {
+    var f = state.dateFrom, t = state.dateTo;
+    if (!f && !t) return state.rows.slice();
+    return state.rows.filter(function (r) { return (!f || r.date >= f) && (!t || r.date <= t); });
+  }
+
+  /* ---------- przeliczenie i render ---------- */
+  function recompute() {
+    var rows = filteredRows();
+    state.V = validateData(rows, state.meta, state.reg);
+    state.R = runEngine(rows, state.prm, state.reg);
+    if (!state.day || state.R.days.indexOf(state.day) < 0)
+      state.day = state.R.days[Math.min(14, Math.max(0, state.R.days.length - 1))] || null;
+    if (state.stepsWho !== "__coop" && !state.R.memberResults.some(function (m) { return m.id === state.stepsWho; }))
+      state.stepsWho = "__coop";
+    renderAll();
+  }
+  function renderAll() {
+    renderRegistry(); renderValidation(); renderKPI(); renderTech(); renderHeat(); renderChart(); renderSteps(); renderView(); renderMembers(); renderOwners(); renderCmp();
+  }
+
+  /* ---------- REJESTR ---------- */
+  function renderRegistry() {
+    var html = "<thead><tr><th class='l'>ID punktu</th><th class='l'>Nazwa punktu</th><th class='l'>Członek</th><th class='l'>Rola</th><th class='l'>Taryfa</th><th>Cena energii czynnej [zł/kWh]</th><th>Opłaty dystrybucyjne zmienne [zł/kWh]</th><th>Opłaty zwolnione dla spółdzielni energetycznej [zł/kWh]</th><th>Opłata stała [zł/miesiąc]</th><th class='l'>Źródła wytwórcze</th><th></th></tr></thead><tbody>";
+    state.reg.points.forEach(function (pt, pi) {
+      html += "<tr class='hov'>"
+        + "<td class='l'><input type='text' data-p='" + pi + "' data-f='id' value='" + esc(pt.id) + "' style='width:90px' aria-label='ID punktu " + esc(pt.id) + "'></td>"
+        + "<td class='l'><input type='text' data-p='" + pi + "' data-f='name' value='" + esc(pt.name) + "' style='min-width:170px' aria-label='Nazwa punktu " + esc(pt.id) + "'></td>"
+        + "<td class='l'><input type='text' data-p='" + pi + "' data-f='owner' value='" + esc(pt.owner) + "' style='min-width:130px' aria-label='Członek punktu " + esc(pt.id) + "'></td>"
+        + "<td class='l'><select data-p='" + pi + "' data-f='role' aria-label='Rola punktu " + esc(pt.id) + "'>"
+        + ["auto", "odbiorca", "wytwórca", "prosument"].map(function (r) { return "<option" + (pt.role === r ? " selected" : "") + ">" + r + "</option>"; }).join("")
+        + "</select></td>"
+        + "<td class='l'><input type='text' data-p='" + pi + "' data-f='tariff' value='" + esc(pt.tariff) + "' style='width:64px' placeholder='C11' aria-label='Taryfa punktu " + esc(pt.id) + "'></td>"
+        + "<td><input type='number' step='0.01' data-p='" + pi + "' data-f='cEnergia' value='" + (pt.cEnergia === null || pt.cEnergia === undefined ? "" : pt.cEnergia) + "' style='width:78px' placeholder='" + state.prm.cEnergia + "' aria-label='Cena energii punktu " + esc(pt.id) + "'></td>"
+        + "<td><input type='number' step='0.01' data-p='" + pi + "' data-f='cDystr' value='" + (pt.cDystr === null || pt.cDystr === undefined ? "" : pt.cDystr) + "' style='width:78px' placeholder='" + state.prm.cDystr + "' aria-label='Opłata dystrybucyjna punktu " + esc(pt.id) + "'></td>"
+        + "<td><input type='number' step='0.01' data-p='" + pi + "' data-f='cZwol' value='" + (pt.cZwol === null || pt.cZwol === undefined ? "" : pt.cZwol) + "' style='width:78px' placeholder='" + state.prm.cZwol + "' aria-label='Opłata zwolniona punktu " + esc(pt.id) + "'></td>"
+        + "<td><input type='number' step='1' data-p='" + pi + "' data-f='fixedMonthly' value='" + (pt.fixedMonthly || 0) + "' style='width:78px' aria-label='Opłata stała miesięczna punktu " + esc(pt.id) + "'></td>"
+        + "<td class='l'>";
+      pt.sources.forEach(function (s) {
+        var ti = techInfo(s.tech);
+        html += "<span class='chip " + (ti.oze ? "oze" : "gas") + "'>" + esc(ti.l.replace(" (nie-OZE)", "")) + " " + fmt(s.power || 0, 0) + " kW" + (s.mode === "meter" ? " · ID:" + esc(s.meterId || "?") : (s.sharePct !== null && isFinite(s.sharePct) ? " · " + s.sharePct + "%" : "")) + "</span>";
+      });
+      html += "</td><td><button class='mini' data-act='srcedit' data-p='" + pi + "'>źródła…</button> <button class='mini' data-act='del' data-p='" + pi + "' title='Usuń punkt' aria-label='Usuń punkt " + esc(pt.id) + "'>✕</button></td></tr>";
+      if (pt._open) {
+        html += "<tr class='srcrow'><td></td><td colspan='10'>";
+        pt.sources.forEach(function (s, si) {
+          html += "<div class='bar' style='margin:4px 0'>"
+            + "<select data-p='" + pi + "' data-s='" + si + "' data-f='tech' aria-label='Technologia źródła'>"
+            + TECHS.map(function (t) { return "<option value='" + t.k + "'" + (s.tech === t.k ? " selected" : "") + ">" + t.l + "</option>"; }).join("")
+            + "</select>"
+            + "<label class='f' style='flex-direction:row;align-items:center;gap:5px'>moc [kW] <input type='number' step='1' data-p='" + pi + "' data-s='" + si + "' data-f='power' value='" + (s.power || 0) + "' style='width:80px'></label>"
+            + "<select data-p='" + pi + "' data-s='" + si + "' data-f='mode' aria-label='Tryb licznika źródła'>"
+            + "<option value='shared'" + (s.mode === "shared" ? " selected" : "") + ">wspólny licznik punktu</option>"
+            + "<option value='meter'" + (s.mode === "meter" ? " selected" : "") + ">osobny szereg (podlicznik)</option>"
+            + "</select>"
+            + (s.mode === "meter"
+              ? "<label class='f' style='flex-direction:row;align-items:center;gap:5px'>ID podlicznika <input type='text' data-p='" + pi + "' data-s='" + si + "' data-f='meterId' value='" + esc(s.meterId || "") + "' style='width:110px'></label>"
+              : "<label class='f' style='flex-direction:row;align-items:center;gap:5px'>udział % (puste = wg mocy) <input type='number' step='1' data-p='" + pi + "' data-s='" + si + "' data-f='sharePct' value='" + (s.sharePct === null || s.sharePct === undefined ? "" : s.sharePct) + "' style='width:70px'></label>")
+            + "<button class='mini' data-act='srcdel' data-p='" + pi + "' data-s='" + si + "'>usuń źródło</button>"
+            + "</div>";
+        });
+        html += "<button class='mini' data-act='srcadd' data-p='" + pi + "'>+ dodaj źródło</button></td></tr>";
+      }
+    });
+    html += "</tbody>";
+    $("regTbl").innerHTML = html;
+  }
+  $("regTbl").addEventListener("input", function (e) {
+    var el = e.target, pi = el.getAttribute("data-p"), si = el.getAttribute("data-s"), f = el.getAttribute("data-f");
+    if (pi === null || !f) return;
+    var pt = state.reg.points[+pi];
+    if (!pt) return;
+    var val = el.type === "number" ? (el.value === "" ? null : num(el.value)) : el.value;
+    if (si !== null) {
+      var s = pt.sources[+si];
+      if (!s) return;
+      if (f === "power" || f === "sharePct") s[f] = val === null ? (f === "power" ? 0 : null) : val;
+      else s[f] = val;
+    } else {
+      if (f === "cEnergia" || f === "cDystr" || f === "cZwol") pt[f] = val;
+      else if (f === "fixedMonthly") pt[f] = val === null ? 0 : val;
+      else pt[f] = String(val).trim();
+    }
+    saveCfg();
+    debounceRecompute(300);
+  });
+  $("regTbl").addEventListener("change", function (e) {
+    var el = e.target, pi = el.getAttribute("data-p"), si = el.getAttribute("data-s"), f = el.getAttribute("data-f");
+    if (pi === null || !f) return;
+    var pt = state.reg.points[+pi];
+    if (!pt) return;
+    if (f === "role" || f === "mode" || f === "tech") {
+      var val = el.value;
+      if (si !== null && pt.sources[+si]) pt.sources[+si][f] = val;
+      else pt[f] = val;
+      if (f === "mode") pt._open = true;
+      saveCfg(); recompute();
+    }
+  });
+  $("regTbl").addEventListener("click", function (e) {
+    var el = e.target, act = el.getAttribute && el.getAttribute("data-act");
+    if (!act) return;
+    var pi = +el.getAttribute("data-p");
+    var pt = state.reg.points[pi];
+    if (act === "srcedit") { pt._open = !pt._open; renderRegistry(); }
+    else if (act === "del") { state.reg.points.splice(pi, 1); saveCfg(); recompute(); }
+    else if (act === "srcadd") { pt.sources.push(newSource()); pt._open = true; saveCfg(); recompute(); }
+    else if (act === "srcdel") { pt.sources.splice(+el.getAttribute("data-s"), 1); saveCfg(); recompute(); }
+  });
+  function seedRegistry(silent) {
+    var known = {};
+    state.reg.points.forEach(function (p2) { known[p2.id] = 1; p2.sources.forEach(function (s) { if (s.mode === "meter" && s.meterId) known[s.meterId] = 1; }); });
+    var seen = {}, added = 0;
+    state.rows.forEach(function (r) {
+      if (known[r.id] || seen[r.id]) return;
+      seen[r.id] = 1;
+      state.reg.points.push(newPoint(r.id, r.name));
+      added++;
+    });
+    if (added) { saveCfg(); }
+    if (!silent) recompute();
+    return added;
+  }
+  $("regSeed").addEventListener("click", function () { var n2 = seedRegistry(false); if (!n2) showErr("Rejestr zawiera już wszystkie punkty z danych."); else showErr(""); });
+  $("regAdd").addEventListener("click", function () {
+    var n2 = 1; while (state.reg.points.some(function (p2) { return p2.id === "P" + n2; })) n2++;
+    state.reg.points.push(newPoint("P" + n2, "Nowy punkt"));
+    saveCfg(); recompute();
+  });
+  $("regExp").addEventListener("click", function () {
+    downloadBlob("bilansSE_konfiguracja.json", new Blob([JSON.stringify({ wersja: "0.5", autor: "Krzysztof Kasprzak", prm: state.prm, reg: state.reg, dateFrom: state.dateFrom, dateTo: state.dateTo }, null, 2)], { type: "application/json" }));
+  });
+  $("regImp").addEventListener("click", function () { $("regFile").click(); });
+  $("regFile").addEventListener("change", function (e) {
+    var f = e.target.files && e.target.files[0];
+    if (!f) return;
+    var fr = new FileReader();
+    fr.onload = function (ev) { try { applyCfgJson(JSON.parse(String(ev.target.result))); showErr(""); } catch (ex) { showErr("Nie udało się odczytać pliku konfiguracji JSON."); } };
+    fr.readAsText(f, "utf-8");
+    e.target.value = "";
+  });
+
+  /* ---------- walidacja / KPI / technologie ---------- */
+  function renderValidation() {
+    var V = state.V;
+    var badge = V.status === "ok" ? '<span class="badge b-ok">✓ dane kompletne</span>'
+      : V.status === "warn" ? '<span class="badge b-warn">⚠ dane z uwagami</span>'
+      : '<span class="badge b-err">✕ błędy danych</span>';
+    var lines = V.issues.map(function (i) {
+      var col = i.level === "err" ? "var(--rust)" : i.level === "warn" ? "#9A6A14" : "var(--ink-soft)";
+      var mark = i.level === "err" ? "✕ " : i.level === "warn" ? "⚠ " : "· ";
+      return '<div style="font-size:13px;color:' + col + '">' + mark + esc(i.text) + "</div>";
+    }).join("");
+    $("valBox").innerHTML = '<div class="bar" style="margin-bottom:8px"><h2 style="margin:0">Walidacja danych i konfiguracji</h2>' + badge + "</div><div style='display:grid;gap:5px'>" + lines + "</div>";
+  }
+  function renderKPI() {
+    var R = state.R, T = R.totals;
+    var pokrycie = T.pobor > 0 ? T.oddanie / T.pobor * 100 : 0;
+    var udzial = T.pobor > 0 ? (T.intOZE + T.fromStorage + T.intGAS) / T.pobor * 100 : 0;
+    var k = [
+      { l: "Pobór punktów", v: fmt(T.pobor / 1000, 1), u: "MWh", c: "var(--blue)" },
+      { l: "Wytwarzanie łącznie", v: fmt(T.oddanie / 1000, 1), u: "MWh", c: "var(--amber)" },
+      { l: "Pokrycie potrzeb (cel ≥ 70%)", v: fmt(pokrycie, 0), u: "%", c: pokrycie >= 70 ? "var(--green)" : "var(--rust)" },
+      { l: "Energia lokalna w poborze", v: fmt(udzial, 0), u: "%", c: "var(--teal)" },
+      { l: "Magazyn — stan końcowy", v: fmt(R.storageEnd, 0), u: "kWh", c: "var(--deep)" },
+      { l: "Oszczędność członków", v: fmt(T.oszcz, 0), u: "zł", c: "var(--green)" }
+    ];
+    $("kpiBox").innerHTML = k.map(function (x) {
+      return '<div class="kpi" style="border-top:4px solid ' + x.c + '"><div class="t">' + x.l + '</div><div class="v" style="color:' + x.c + '">' + x.v + "<span>" + x.u + "</span></div></div>";
+    }).join("");
+  }
+  function renderTech() {
+    var tp = state.R.techProd, tot = 0;
+    for (var k in tp) tot += tp[k];
+    var html = "<thead><tr><th class='l'>Technologia</th><th class='l'>Grupa</th><th>Produkcja [kWh]</th><th>Udział</th></tr></thead><tbody>";
+    var keys = Object.keys(tp).sort(function (a, b) { return tp[b] - tp[a]; });
+    if (!keys.length) html += "<tr><td colspan='4' class='l'>Brak produkcji w danych.</td></tr>";
+    keys.forEach(function (k2) {
+      var ti = techInfo(k2);
+      var lbl = k2 === "nieskonfigurowane" ? "— nieskonfigurowane źródło —" : ti.l;
+      var grp = k2 === "nieskonfigurowane" ? "OZE (domyślnie)" : (ti.oze ? "OZE" : "nie-OZE");
+      html += "<tr class='hov'><td class='l'>" + esc(lbl) + "</td><td class='l'><span class='chip " + (grp.indexOf("nie-OZE") === 0 ? "gas" : "oze") + "'>" + grp + "</span></td><td>" + fmt(tp[k2]) + "</td><td>" + fmt(tot > 0 ? tp[k2] / tot * 100 : 0, 1) + "%</td></tr>";
+    });
+    html += "<tr><td class='l' style='font-weight:700;border-top:2px solid var(--deep)'>RAZEM</td><td style='border-top:2px solid var(--deep)'></td><td style='font-weight:600;border-top:2px solid var(--deep)'>" + fmt(tot) + "</td><td style='border-top:2px solid var(--deep)'></td></tr></tbody>";
+    $("techTbl").innerHTML = html;
+  }
+
+  /* ---------- taśma / wykres ---------- */
+  function renderHeat() {
+    var R = state.R;
+    var maxAbs = 1;
+    R.coopHourly.forEach(function (r) { if (Math.abs(r.net) > maxAbs) maxAbs = Math.abs(r.net); });
+    var byDay = new Map();
+    R.days.forEach(function (d) { byDay.set(d, new Array(24).fill(null)); });
+    R.coopHourly.forEach(function (r) { byDay.get(r.date)[r.hour] = r; });
+    var html = '<div class="hgrid" style="margin-bottom:4px"><div></div>';
+    for (var h = 0; h < 24; h++) html += '<div class="hhour">' + (h % 3 === 0 ? h : "") + "</div>";
+    html += "</div>";
+    R.days.forEach(function (d) {
+      var sel = d === state.day;
+      html += '<div class="hgrid" data-day="' + d + '" style="cursor:pointer;border-radius:3px;' + (sel ? "outline:2px solid var(--deep);outline-offset:1px" : "") + '" role="region" aria-label="Taśma godzinowa dla dnia ' + d + '">';
+      html += '<div class="hlbl" style="' + (sel ? "color:var(--deep);font-weight:600" : "") + '">' + d.slice(8) + "." + d.slice(5, 7) + "</div>";
+      byDay.get(d).forEach(function (r, hh) {
+        var col = "#E9EFEA", tip = "";
+        if (r) {
+          var t = Math.min(1, Math.abs(r.net) / maxAbs);
+          if (r.net < -1e-6) col = "rgba(221,148,38," + (0.18 + 0.72 * t).toFixed(2) + ")";
+          else if (r.net > 1e-6) col = r.fromSeller > r.fromStorage
+            ? "rgba(58,107,143," + (0.18 + 0.72 * t).toFixed(2) + ")"
+            : "rgba(44,140,122," + (0.2 + 0.7 * t).toFixed(2) + ")";
+          tip = d + " g." + hh + ":00 | pobór " + fmt(r.pobor, 1) + " · wytw. " + fmt(r.oddanie, 1) + " | z mag. " + fmt(r.fromStorage, 1) + " · od sprzed. " + fmt(r.fromSeller, 1);
+        }
+        html += '<div class="hcell" title="' + esc(tip) + '" style="background:' + col + '" role="img" aria-label="' + esc(tip) + '"></div>';
+      });
+      html += "</div>";
+    });
+    $("heatBox").innerHTML = html;
+  }
+  function renderChart() {
+    var R = state.R, day = state.day;
+    var dayFormatted = day ? day.slice(8) + "." + day.slice(5, 7) + "." + day.slice(0, 4) : "";
+    $("chartTitle").textContent = "Profil dobowy — " + dayFormatted;
+    $("dayPick").value = day || "";
+    if (R.days.length) { $("dayPick").min = R.days[0]; $("dayPick").max = R.days[R.days.length - 1]; }
+    var arr = new Array(24).fill(null).map(function () { return { p: 0, o: 0, s: 0, z: 0 }; });
+    R.coopHourly.forEach(function (r) {
+      if (r.date === day) arr[r.hour] = { p: r.pobor, o: r.oddanie, s: r.fromStorage, z: r.fromSeller };
+    });
+    var W = 1000, H = 300, padL = 56, padB = 26, padT = 10, padR = 10;
+    var maxY = 1;
+    arr.forEach(function (a) { maxY = Math.max(maxY, a.p, a.o); });
+    maxY *= 1.08;
+    function X(h) { return padL + (W - padL - padR) * h / 23; }
+    function Y(v) { return padT + (H - padT - padB) * (1 - v / maxY); }
+    function line(keyName) {
+      return arr.map(function (a, h) { return (h ? "L" : "M") + X(h).toFixed(1) + " " + Y(a[keyName]).toFixed(1); }).join(" ");
+    }
+    var svg = '<svg viewBox="0 0 ' + W + " " + H + '" style="width:100%;height:auto;display:block" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Wykres profilu dobowego dla dnia ' + dayFormatted + '">';
+    svg += '<title>Profil dobowy dla ' + esc(dayFormatted) + '</title>';
+    for (var g = 0; g <= 4; g++) {
+      var yv = maxY * g / 4, yy = Y(yv);
+      svg += '<line x1="' + padL + '" y1="' + yy + '" x2="' + (W - padR) + '" y2="' + yy + '" stroke="#D8E1DA" stroke-dasharray="3 3"/>';
+      svg += '<text x="' + (padL - 8) + '" y="' + (yy + 4) + '" text-anchor="end" font-family="IBM Plex Mono,monospace" font-size="11" fill="#4A5B51">' + fmt(yv, 0) + "</text>";
+    }
+    for (var h2 = 0; h2 < 24; h2 += 3)
+      svg += '<text x="' + X(h2) + '" y="' + (H - 8) + '" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="11" fill="#4A5B51">' + h2 + ":00</text>";
+    svg += '<path d="' + line("o") + " L" + X(23) + " " + Y(0) + " L" + X(0) + " " + Y(0) + ' Z" fill="rgba(221,148,38,.22)" stroke="none"/>';
+    svg += '<path d="' + line("p") + " L" + X(23) + " " + Y(0) + " L" + X(0) + " " + Y(0) + ' Z" fill="rgba(58,107,143,.14)" stroke="none"/>';
+    svg += '<path d="' + line("o") + '" fill="none" stroke="#DD9426" stroke-width="2"/>';
+    svg += '<path d="' + line("p") + '" fill="none" stroke="#3A6B8F" stroke-width="2"/>';
+    svg += '<path d="' + line("s") + '" fill="none" stroke="#2C8C7A" stroke-width="2"/>';
+    svg += '<path d="' + line("z") + '" fill="none" stroke="#BF5B2E" stroke-width="2"/>';
+    svg += '<text x="' + (padL - 46) + '" y="14" font-family="IBM Plex Mono,monospace" font-size="11" fill="#4A5B51">kWh</text></svg>';
+    $("chartBox").innerHTML = svg;
+  }
+
+  /* ---------- etapy ---------- */
+  function renderSteps() {
+    var R = state.R, day = state.day;
+    $("stepsTitle").textContent = "Etapy obliczeń — audyt godzinowy · " + (day ? day.slice(8) + "." + day.slice(5, 7) : "");
+    var sel = $("stepsWho");
+    sel.innerHTML = '<option value="__coop">Cała spółdzielnia</option>' + R.memberResults.map(function (m) {
+      return '<option value="' + esc(m.id) + '"' + (state.stepsWho === m.id ? " selected" : "") + ">" + esc(m.name) + " (" + esc(m.id) + ")</option>";
+    }).join("");
+    sel.value = state.stepsWho;
+    $("stepsNote").textContent = "Kolejność obliczeń w każdej godzinie: bilans = pobór − generacja → deficyt pokrywany: wymiana OZE → energia nie-OZE → magazyn OZE → sprzedawca → nadwyżka OZE × opust " + state.prm.opust.toLocaleString("pl-PL") + " do magazynu, nadwyżka nie-OZE sprzedawana do sieci. Każdy wynik jest odtwarzalny z tej tabeli.";
+    var hs = R.coopHourly.filter(function (r) { return r.date === day; });
+    var coop = state.stepsWho === "__coop";
+    var rows;
+    if (coop) {
+      rows = hs.map(function (r) { return { h: r.hour, p: r.pobor, o: r.oddanie, bal: r.net, intO: r.intOZE, intG: r.intGAS, sto: r.fromStorage, sel: r.fromSeller, dep: r.deposited * state.prm.opust, sold: r.sold, mag: r.storage }; });
+    } else {
+      rows = hs.map(function (r) {
+        var d = (R.detail.get(r.key) || new Map()).get(state.stepsWho) || { p: 0, o: 0, intO: 0, intG: 0, sto: 0, sel: 0, dep: 0, sold: 0 };
+        return { h: r.hour, p: d.p, o: d.o, bal: d.p - d.o, intO: d.intO, intG: d.intG, sto: d.sto, sel: d.sel, dep: d.dep * state.prm.opust, sold: d.sold, mag: null };
+      });
+    }
+    var S = { p: 0, o: 0, intO: 0, intG: 0, sto: 0, sel: 0, dep: 0, sold: 0 };
+    rows.forEach(function (r) { S.p += r.p; S.o += r.o; S.intO += r.intO; S.intG += r.intG; S.sto += r.sto; S.sel += r.sel; S.dep += r.dep; S.sold += r.sold; });
+    var html = "<thead><tr><th class='l'>Godz.</th><th>Pobór</th><th>Generacja</th><th>Bilans</th><th>Wymiana OZE</th><th>Nie-OZE</th><th>Z magazynu</th><th>Od sprzedawcy</th><th>Do magazynu (po opuście)</th><th>Sprzedaż nie-OZE</th>" + (coop ? "<th>Stan magazynu</th>" : "") + "</tr></thead><tbody>";
+    rows.forEach(function (r) {
+      html += "<tr class='hov'><td class='l' style='font-family:var(--mono)'>" + pad2(r.h) + ":00</td>"
+        + "<td>" + fmt(r.p, 1) + "</td>"
+        + "<td style='color:" + (r.o > 0 ? "var(--amber)" : "var(--ink-soft)") + "'>" + fmt(r.o, 1) + "</td>"
+        + "<td style='color:" + (r.bal < 0 ? "var(--amber)" : "inherit") + "'>" + fmt(r.bal, 1) + "</td>"
+        + "<td>" + fmt(r.intO, 1) + "</td>"
+        + "<td style='color:" + (r.intG > 0 ? "var(--gas)" : "var(--ink-soft)") + "'>" + fmt(r.intG, 1) + "</td>"
+        + "<td style='color:" + (r.sto > 0 ? "var(--teal)" : "var(--ink-soft)") + "'>" + fmt(r.sto, 1) + "</td>"
+        + "<td style='color:" + (r.sel > 0 ? "var(--rust)" : "var(--ink-soft)") + "'>" + fmt(r.sel, 1) + "</td>"
+        + "<td>" + fmt(r.dep, 1) + "</td>"
+        + "<td style='color:" + (r.sold > 0 ? "var(--gas)" : "var(--ink-soft)") + "'>" + fmt(r.sold, 1) + "</td>"
+        + (coop ? "<td style='color:var(--deep)'>" + fmt(r.mag, 0) + "</td>" : "")
+        + "</tr>";
+    });
+    html += "<tr><td class='l' style='font-weight:700;border-top:2px solid var(--deep)'>Σ dnia</td>";
+    [S.p, S.o, S.p - S.o, S.intO, S.intG, S.sto, S.sel, S.dep, S.sold].forEach(function (v) {
+      html += "<td style='font-weight:600;border-top:2px solid var(--deep)'>" + fmt(v, 1) + "</td>";
+    });
+    if (coop) html += "<td style='border-top:2px solid var(--deep)'></td>";
+    html += "</tr></tbody>";
+    $("stepsTbl").innerHTML = html;
+  }
+
+  /* ---------- rozliczenie punktów i członków ---------- */
+  function renderMembers() {
+    var R = state.R, T = R.totals;
+    var html = "<thead><tr><th class='l'>Punkt</th><th class='l'>Rola</th><th class='l'>Taryfa</th><th>Pobór [kWh]</th><th>Generacja [kWh]</th><th>Energia SE OZE [kWh]</th><th>Nie-OZE [kWh]</th><th>Od sprzedawcy [kWh]</th><th>Do magazynu [kWh]</th><th>Sprzedaż [kWh]</th><th>Koszt w SE [zł]</th><th>Koszt poza SE [zł]</th><th>Oszczędność [zł]</th><th>Przychód wytw. [zł]</th></tr></thead><tbody>";
+    R.memberResults.forEach(function (m) {
+      html += "<tr class='hov'><td class='l' style='font-weight:600'>" + esc(m.name) + " <span style='font-family:var(--mono);font-weight:400;color:var(--ink-soft);font-size:11px'>" + esc(m.id) + "</span></td>"
+        + "<td class='l'>" + esc(m.role) + "</td><td class='l'>" + esc(m.tariff) + "</td>"
+        + "<td>" + fmt(m.pobor) + "</td>"
+        + "<td style='color:" + (m.oddanie > 0 ? "var(--amber)" : "var(--ink-soft)") + "'>" + fmt(m.oddanie) + "</td>"
+        + "<td style='color:var(--teal)'>" + fmt(m.eOZE) + "</td>"
+        + "<td style='color:" + (m.eGAS > 0 ? "var(--gas)" : "var(--ink-soft)") + "'>" + fmt(m.eGAS) + "</td>"
+        + "<td style='color:" + (m.fromSeller > 0 ? "var(--rust)" : "var(--ink-soft)") + "'>" + fmt(m.fromSeller) + "</td>"
+        + "<td>" + fmt(m.toStorage) + "</td>"
+        + "<td style='color:" + (m.sold > 0 ? "var(--gas)" : "var(--ink-soft)") + "'>" + fmt(m.sold) + "</td>"
+        + "<td>" + fmt(m.kosztSE, 2) + "</td><td>" + fmt(m.kosztBez, 2) + "</td>"
+        + "<td style='color:var(--green);font-weight:600'>" + fmt(m.oszcz, 2) + "</td>"
+        + "<td style='color:" + (m.przychod > 0 ? "var(--deep)" : "var(--ink-soft)") + "'>" + fmt(m.przychod, 2) + "</td></tr>";
+    });
+    html += "<tr><td class='l' style='font-weight:700;border-top:2px solid var(--deep)'>RAZEM</td><td style='border-top:2px solid var(--deep)'></td><td style='border-top:2px solid var(--deep)'></td>";
+    [T.pobor, T.oddanie, T.intOZE + T.fromStorage, T.intGAS, T.fromSeller, T.toStorage, T.sold].forEach(function (v) {
+      html += "<td style='font-weight:600;border-top:2px solid var(--deep)'>" + fmt(v) + "</td>";
+    });
+    html += "<td style='font-weight:600;border-top:2px solid var(--deep)'>" + fmt(T.kosztSE, 2) + "</td>"
+      + "<td style='font-weight:600;border-top:2px solid var(--deep)'>" + fmt(T.kosztBez, 2) + "</td>"
+      + "<td style='font-weight:700;color:var(--green);border-top:2px solid var(--deep)'>" + fmt(T.oszcz, 2) + "</td>"
+      + "<td style='font-weight:600;border-top:2px solid var(--deep)'>" + fmt(T.przychod, 2) + "</td></tr></tbody>";
+    $("memTbl").innerHTML = html;
+  }
+  function renderOwners() {
+    var R = state.R;
+    var multi = R.owners.length !== R.memberResults.length;
+    $("ownerCard").classList.toggle("hide", !multi);
+    if (!multi) return;
+    var html = "<thead><tr><th class='l'>Członek</th><th>Punkty</th><th>Pobór [kWh]</th><th>Generacja [kWh]</th><th>Energia SE OZE [kWh]</th><th>Nie-OZE [kWh]</th><th>Od sprzedawcy [kWh]</th><th>Koszt w SE [zł]</th><th>Koszt poza SE [zł]</th><th>Oszczędność [zł]</th><th>Przychód [zł]</th></tr></thead><tbody>";
+    R.owners.forEach(function (o) {
+      html += "<tr class='hov'><td class='l' style='font-weight:600'>" + esc(o.owner) + "</td><td>" + o.points + "</td>"
+        + "<td>" + fmt(o.pobor) + "</td><td>" + fmt(o.oddanie) + "</td><td style='color:var(--teal)'>" + fmt(o.eOZE) + "</td>"
+        + "<td style='color:" + (o.eGAS > 0 ? "var(--gas)" : "var(--ink-soft)") + "'>" + fmt(o.eGAS) + "</td>"
+        + "<td>" + fmt(o.fromSeller) + "</td><td>" + fmt(o.kosztSE, 2) + "</td><td>" + fmt(o.kosztBez, 2) + "</td>"
+        + "<td style='color:var(--green);font-weight:600'>" + fmt(o.oszcz, 2) + "</td><td>" + fmt(o.przychod, 2) + "</td></tr>";
+    });
+    html += "</tbody>";
+    $("ownerTbl").innerHTML = html;
+  }
+
+  /* ---------- konfigurowalny widok wyników ---------- */
+  var VIEW_CAP = 1500;
+  function viewCfg() {
+    var v = state.view;
+    var ids = null;
+    if (v.mode !== "coop") {
+      var picked = Object.keys(v.sel).filter(function (k) { return v.sel[k]; });
+      ids = picked.length ? picked : null;
+    }
+    return { from: v.from, to: v.to, gran: v.gran, mode: v.mode, ids: ids };
+  }
+  function renderView() {
+    var R = state.R, v = state.view;
+    $("vFrom").value = v.from; $("vTo").value = v.to;
+    $("vGran").value = v.gran; $("vMode").value = v.mode;
+    /* podmioty */
+    var entHtml = "";
+    if (v.mode === "points") {
+      entHtml = "<span class='note'>Punkty (puste = wszystkie):</span> " + R.memberResults.map(function (m) {
+        return "<label class='chip' style='cursor:pointer'><input type='checkbox' data-ve='" + esc(m.id) + "'" + (v.sel[m.id] ? " checked" : "") + " style='vertical-align:-2px'> " + esc(m.name) + "</label>";
+      }).join("");
+    } else if (v.mode === "owners") {
+      entHtml = "<span class='note'>Członkowie (puste = wszyscy):</span> " + R.owners.map(function (o) {
+        return "<label class='chip' style='cursor:pointer'><input type='checkbox' data-ve='" + esc(o.owner) + "'" + (v.sel[o.owner] ? " checked" : "") + " style='vertical-align:-2px'> " + esc(o.owner) + "</label>";
+      }).join("");
+    } else entHtml = "<span class='note'>Zestawienie dla całej spółdzielni (suma wszystkich punktów).</span>";
+    $("vEnts").innerHTML = entHtml;
+    /* elementy */
+    $("vElems").innerHTML = "<span class='note'>Elementy danych:</span> " + ELEMS.map(function (el) {
+      return "<label class='chip' style='cursor:pointer'><input type='checkbox' data-vk='" + el.k + "'" + (v.elems[el.k] ? " checked" : "") + " style='vertical-align:-2px'> " + esc(el.l) + "</label>";
+    }).join("");
+    /* tabela */
+    var AG = aggregateView(R, state.prm, viewCfg());
+    state.AG = AG;
+    var cols = ELEMS.filter(function (el) { return v.elems[el.k]; });
+    var multiEnt = v.mode !== "coop";
+    var html = "<thead><tr><th class='l'>Okres</th>" + (multiEnt ? "<th class='l'>Podmiot</th>" : "") + cols.map(function (c) { return "<th>" + esc(c.l) + "</th>"; }).join("") + "</tr></thead><tbody>";
+    if (!AG.rows.length) html += "<tr><td colspan='" + (cols.length + (multiEnt ? 2 : 1)) + "' class='l'>Brak danych w wybranym zakresie.</td></tr>";
+    AG.rows.slice(0, VIEW_CAP).forEach(function (r) {
+      html += "<tr class='hov'><td class='l' style='font-family:var(--mono)'>" + esc(r.bucket) + "</td>"
+        + (multiEnt ? "<td class='l'>" + esc(r.entity) + "</td>" : "")
+        + cols.map(function (c) { return "<td>" + fmt(r.vals[c.k], c.d) + "</td>"; }).join("") + "</tr>";
+    });
+    if (AG.rows.length > 1) {
+      html += "<tr><td class='l' style='font-weight:700;border-top:2px solid var(--deep)'>Σ</td>" + (multiEnt ? "<td style='border-top:2px solid var(--deep)'></td>" : "")
+        + cols.map(function (c) { return "<td style='font-weight:600;border-top:2px solid var(--deep)'>" + fmt(AG.totals[c.k], c.d) + "</td>"; }).join("") + "</tr>";
+    }
+    html += "</tbody>";
+    $("viewTbl").innerHTML = html;
+    $("vNote").textContent = AG.rows.length > VIEW_CAP
+      ? "Wyświetlono pierwsze " + fmt(VIEW_CAP) + " z " + fmt(AG.rows.length) + " wierszy — pełne zestawienie dostępne w eksporcie CSV. Zawęź zakres dat lub zmień granulację, aby zobaczyć całość."
+      : "Wierszy: " + fmt(AG.rows.length) + ".";
+  }
+  function exportViewCsv() {
+    if (!state.AG) return;
+    var v = state.view;
+    var cols = ELEMS.filter(function (el) { return v.elems[el.k]; });
+    var multiEnt = v.mode !== "coop";
+    downloadCsv("widok_wynikow.csv",
+      ["okres"].concat(multiEnt ? ["podmiot"] : []).concat(cols.map(function (c) { return c.l; })),
+      state.AG.rows.map(function (r) {
+        return [r.bucket].concat(multiEnt ? [r.entity] : []).concat(cols.map(function (c) { return r.vals[c.k].toFixed(c.d); }));
+      }));
+  }
+  $("viewCard").addEventListener("change", function (e) {
+    var el = e.target;
+    var ve = el.getAttribute && el.getAttribute("data-ve");
+    var vk = el.getAttribute && el.getAttribute("data-vk");
+    if (ve !== null && ve !== undefined) { state.view.sel[ve] = el.checked; }
+    else if (vk) { state.view.elems[vk] = el.checked ? 1 : 0; }
+    else if (el.id === "vFrom") state.view.from = el.value;
+    else if (el.id === "vTo") state.view.to = el.value;
+    else if (el.id === "vGran") state.view.gran = el.value;
+    else if (el.id === "vMode") { state.view.mode = el.value; state.view.sel = {}; }
+    else return;
+    saveCfg(); renderView();
+  });
+  function stepViewDay(dir) {
+    var days = state.R.days;
+    if (!days.length) return;
+    var cur = (state.view.from && state.view.from === state.view.to) ? state.view.from : (state.day || days[days.length - 1]);
+    var i = days.indexOf(cur);
+    if (i < 0) { i = 0; for (var j = 0; j < days.length; j++) if (days[j] <= cur) i = j; }
+    else i = i + dir;
+    i = Math.max(0, Math.min(days.length - 1, i));
+    state.view.from = days[i]; state.view.to = days[i];
+    if (state.view.gran === "total" || state.view.gran === "month") state.view.gran = "hour";
+    saveCfg(); renderView();
+  }
+  $("vPrevD").addEventListener("click", function () { stepViewDay(-1); });
+  $("vNextD").addEventListener("click", function () { stepViewDay(1); });
+  $("vAllD").addEventListener("click", function () { state.view.from = ""; state.view.to = ""; saveCfg(); renderView(); });
+  $("vCsv").addEventListener("click", exportViewCsv);
+
+  /* ---------- porównanie ---------- */
+  function renderCmp() {
+    var box = $("cmpBox"), badge = $("cmpBadge"), info = $("cmpInfo");
+    if (!state.ext) { box.innerHTML = ""; badge.innerHTML = ""; info.classList.remove("hide"); $("btnExtCsv").classList.add("hide"); $("showAllWrap").classList.add("hide"); return; }
+    info.classList.add("hide"); $("btnExtCsv").classList.remove("hide"); $("showAllWrap").classList.remove("hide");
+    var CMP = compareResults(state.R.memberResults, state.ext, state.tolPct);
+    state.CMP = CMP;
+    badge.innerHTML = CMP.bad === 0
+      ? '<span class="badge b-ok">✓ zgodne — ' + CMP.compared + " wartości</span>"
+      : '<span class="badge b-err">✕ ' + CMP.bad + " rozbieżności / " + CMP.compared + " porównanych wartości</span>";
+    var vis = CMP.rows.filter(function (r) { return state.showAll || !r.ok; });
+    var html = "<span style='font-family:var(--mono);font-size:12px;color:var(--ink-soft)'>Źródło: " + esc(state.ext.name) + "</span>";
+    html += "<table style='min-width:760px;margin-top:6px'><thead><tr><th class='l'>Punkt</th><th class='l'>Metryka</th><th>Narzędzie</th><th>System zewn.</th><th>Różnica</th><th style='text-align:center'>Status</th></tr></thead><tbody>";
+    if (!vis.length) html += "<tr><td colspan='6' class='l' style='color:var(--green)'>Brak rozbieżności powyżej tolerancji " + state.tolPct + "%.</td></tr>";
+    vis.forEach(function (r) {
+      html += "<tr class='hov'><td class='l'>" + esc(r.name) + " <span style='font-family:var(--mono);font-size:11px;color:var(--ink-soft)'>" + esc(r.id) + "</span></td>"
+        + "<td class='l'>" + esc(r.note || r.metric) + "</td>"
+        + "<td>" + (r.tool === null ? "—" : fmt(r.tool, r.d)) + "</td>"
+        + "<td>" + (r.ext === null ? "—" : fmt(r.ext, r.d)) + "</td>"
+        + "<td style='color:" + (r.ok ? "var(--ink-soft)" : "var(--rust)") + ";font-weight:" + (r.ok ? 400 : 600) + "'>" + (r.diff === null ? "—" : (r.diff > 0 ? "+" : "") + fmt(r.diff, r.d)) + "</td>"
+        + "<td style='text-align:center;font-family:var(--body);font-weight:600;color:" + (r.ok ? "var(--green)" : "var(--rust)") + "'>" + (r.ok ? "zgodne" : "ROZBIEŻNOŚĆ") + "</td></tr>";
+    });
+    html += "</tbody></table>";
+    box.innerHTML = html;
+  }
+
+  /* ---------- KREATOR IMPORTU ---------- */
+  var wiz = { queue: [], idx: 0, staged: [], stagedStats: { rejected: 0, sub60: false }, cur: null };
+  function openWizardWithFiles(files) {
+    showErr("");
+    wiz.queue = []; wiz.idx = 0; wiz.staged = []; wiz.stagedStats = { rejected: 0, sub60: false };
+    var pending = files.length;
+    Array.prototype.forEach.call(files, function (f) {
+      var name = f.name, lower = name.toLowerCase();
+      if (/\.(xlsx|xls)$/.test(lower)) {
+        if (!HAS_XLSX()) {
+          showErr("Plik „" + name + "” to Excel, a biblioteka obsługi XLSX nie została załadowana (brak internetu przy pierwszym uruchomieniu?). Zapisz dane jako CSV i spróbuj ponownie — CSV działa w pełni offline.");
+          if (--pending === 0) startWizard();
+          return;
+        }
+        var fr = new FileReader();
+        fr.onload = function (e) {
+          try {
+            var wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+            var sheets = {};
+            wb.SheetNames.forEach(function (sn) {
+              var aoa = XLSX.utils.sheet_to_json(wb.Sheets[sn], { header: 1, raw: false, defval: "" });
+              if (aoa.length) sheets[sn] = aoa;
+            });
+            if (Object.keys(sheets).length) wiz.queue.push({ name: name, sheets: sheets });
+            else showErr("Plik „" + name + "” nie zawiera danych.");
+          } catch (ex) { showErr("Nie udało się odczytać pliku Excel „" + name + "”."); }
+          if (--pending === 0) startWizard();
+        };
+        fr.readAsArrayBuffer(f);
+      } else {
+        var fr2 = new FileReader();
+        fr2.onload = function (e) {
+          try {
+            var res = parseCSVText(String(e.target.result));
+            if (res.aoa.length) wiz.queue.push({ name: name, sheets: { "CSV": res.aoa } });
+            else showErr("Plik „" + name + "” jest pusty.");
+          } catch (ex) { showErr("Nie udało się odczytać pliku „" + name + "”."); }
+          if (--pending === 0) startWizard();
+        };
+        fr2.readAsText(f, "utf-8");
+      }
+    });
+  }
+  function startWizard() {
+    if (!wiz.queue.length) { showErr("Nie wczytano żadnych plików z danymi."); return; }
+    wiz.idx = 0;
+    $("wizard").classList.remove("hide");
+    loadWizardFile();
+    $("wizard").scrollIntoView({ behavior: "smooth" });
+  }
+  function loadWizardFile() {
+    var f = wiz.queue[wiz.idx];
+    wiz.cur = { file: f, sheet: Object.keys(f.sheets)[0] };
+    $("wzFileNo").textContent = (wiz.idx + 1) + " z " + wiz.queue.length;
+    $("wzFileName").textContent = f.name;
+    var sheetSel = $("wzSheet"), names = Object.keys(f.sheets);
+    sheetSel.innerHTML = names.map(function (n2) { return "<option>" + esc(n2) + "</option>"; }).join("");
+    $("wzSheetWrap").style.display = names.length > 1 ? "" : "none";
+    wizardDetect();
+    $("wzQueue").textContent = wiz.staged.length ? ("W zestawie: " + fmt(wiz.staged.length) + " rekordów z poprzednich plików.") : "";
+  }
+  function wizardDetect() {
+    var aoa = wiz.cur.file.sheets[wiz.cur.sheet];
+    var head = detectHeaderRow(aoa);
+    var det = autoDetect(aoa, head);
+    wiz.cur.aoa = aoa; wiz.cur.head = head; wiz.cur.det = det;
+    $("wzHead").value = head + 1;
+    $("wzFormat").value = det.format;
+    $("wzConv").value = "auto";
+    $("wzUnit").value = "1";
+    $("wzDir").value = "both";
+    var base = wiz.cur.file.name.replace(/\.[^.]+$/, "");
+    $("wzConstId").value = det.map.id >= 0 ? "" : base;
+    $("wzConstName").value = "";
+    renderMapping();
+    renderPreview();
+  }
+  function colOptions(selIdx) {
+    var hdr = wiz.cur.aoa[wiz.cur.head] || [];
+    var o = '<option value="-1">— brak —</option>';
+    for (var i = 0; i < hdr.length; i++) {
+      var lbl = String(hdr[i]).trim() || "Kolumna " + (i + 1);
+      o += '<option value="' + i + '"' + (i === selIdx ? " selected" : "") + ">" + esc(lbl.slice(0, 34)) + "</option>";
+    }
+    return o;
+  }
+  function renderMapping() {
+    var f = $("wzFormat").value, m = wiz.cur.det.map;
+    var fields = [];
+    if (f === "long") fields = [["date", "Data"], ["hour", "Godzina"], ["id", "ID punktu / PPE"], ["name", "Nazwa (opcjonalnie)"], ["pob", "Pobór (A+)"], ["odd", "Oddanie (A−)"], ["dir", "Kierunek (opcjonalnie)"], ["val", "Wartość (przy kierunku)"]];
+    else if (f === "timestamp") fields = [["ts", "Data i czas"], ["id", "ID punktu / PPE"], ["name", "Nazwa (opcjonalnie)"], ["pob", "Pobór (A+)"], ["odd", "Oddanie (A−)"], ["dir", "Kierunek (opcjonalnie)"], ["val", "Wartość (przy kierunku)"]];
+    else fields = [["date", "Data (doba)"], ["id", "ID punktu / PPE"], ["name", "Nazwa (opcjonalnie)"], ["dir", "Kierunek (opcjonalnie)"]];
+    $("wzMap").innerHTML = fields.map(function (fd) {
+      return '<label class="f">' + fd[1] + '<select data-role="' + fd[0] + '">' + colOptions(m[fd[0]] !== undefined ? m[fd[0]] : -1) + "</select></label>";
+    }).join("") + (f === "wide" ? '<div class="note" style="align-self:end">Wykryte kolumny godzinowe: <b>' + wiz.cur.det.hourCols.length + "</b> (etykiety " + (wiz.cur.det.hourCols.length ? wiz.cur.det.hourCols[0].label + "–" + wiz.cur.det.hourCols[wiz.cur.det.hourCols.length - 1].label : "—") + ")</div>" : "");
+    Array.prototype.forEach.call($("wzMap").querySelectorAll("select"), function (s) {
+      s.addEventListener("change", function () {
+        wiz.cur.det.map[s.getAttribute("data-role")] = parseInt(s.value, 10);
+        renderPreview();
+      });
+    });
+  }
+  function renderPreview() {
+    var aoa = wiz.cur.aoa, head = parseInt($("wzHead").value, 10) - 1;
+    if (!(head >= 0)) head = 0;
+    wiz.cur.head = head;
+    var hdr = aoa[head] || [];
+    var maxC = Math.min(hdr.length, 10);
+    var html = "<thead><tr>";
+    for (var c = 0; c < maxC; c++) html += "<th class='l'>" + esc(String(hdr[c]).slice(0, 18) || "k" + (c + 1)) + "</th>";
+    html += "</tr></thead><tbody>";
+    for (var r = head + 1; r < Math.min(aoa.length, head + 6); r++) {
+      html += "<tr>";
+      for (var c2 = 0; c2 < maxC; c2++) html += "<td class='l' style='font-family:var(--mono)'>" + esc(String((aoa[r] || [])[c2]).slice(0, 18)) + "</td>";
+      html += "</tr>";
+    }
+    html += "</tbody>";
+    $("wzPrev").innerHTML = html;
+    $("wzStat").textContent = "Wierszy danych w arkuszu: " + fmt(Math.max(0, aoa.length - head - 1)) + ". Sprawdź mapowanie i kliknij „Dodaj ten plik do zestawu”.";
+  }
+  function wizardAdd() {
+    var cfg = {
+      format: $("wzFormat").value,
+      map: wiz.cur.det.map,
+      hourCols: wiz.cur.det.hourCols,
+      hourConv: $("wzConv").value,
+      unitMul: parseFloat($("wzUnit").value),
+      fileDir: $("wzDir").value,
+      constId: $("wzConstId").value.trim(),
+      constName: $("wzConstName").value.trim()
+    };
+    if (cfg.map.id < 0 && !cfg.constId) { showErr("Wskaż kolumnę ID punktu albo wpisz stały ID dla tego pliku."); return; }
+    showErr("");
+    var res = convertFile(wiz.cur.aoa, wiz.cur.head, cfg);
+    if (!res.rows.length) { showErr("Z pliku „" + wiz.cur.file.name + "” nie udało się odczytać żadnego poprawnego rekordu — sprawdź układ danych i mapowanie kolumn."); return; }
+    wiz.staged = wiz.staged.concat(res.rows);
+    wiz.stagedStats.rejected += res.stats.rejected;
+    wiz.stagedStats.sub60 = wiz.stagedStats.sub60 || res.stats.sub60;
+    nextWizardFile();
+  }
+  function nextWizardFile() {
+    wiz.idx++;
+    if (wiz.idx < wiz.queue.length) { loadWizardFile(); return; }
+    $("wizard").classList.add("hide");
+    if (!wiz.staged.length) { showErr("Nie dodano żadnych danych."); return; }
+    var agg = new Map();
+    wiz.staged.forEach(function (r) {
+      var k = r.date + "|" + pad2(r.hour) + "|" + r.id;
+      var e = agg.get(k);
+      if (!e) { agg.set(k, { date: r.date, hour: r.hour, id: r.id, name: r.name, pobor: 0, oddanie: 0 }); e = agg.get(k); }
+      e.pobor += r.pobor; e.oddanie += r.oddanie;
+      if (r.name && e.name === e.id) e.name = r.name;
+    });
+    var rows = [];
+    agg.forEach(function (e) { rows.push(e); });
+    rows.sort(function (a, b) { return (a.date + pad2(a.hour) + a.id) < (b.date + pad2(b.hour) + b.id) ? -1 : 1; });
+    state.rows = rows;
+    state.meta = { rejected: wiz.stagedStats.rejected, sub60: wiz.stagedStats.sub60 };
+    state.ext = null; state.day = null; state.stepsWho = "__coop";
+    $("srcLbl").textContent = "Import: " + wiz.queue.length + " plik(i) · " + fmt(rows.length) + " rekordów godzinowych";
+    seedRegistry(true);
+    recompute();
+  }
+
+  /* ---------- wyniki zewnętrzne ---------- */
+  function loadExt(file) {
+    showErr("");
+    var lower = file.name.toLowerCase();
+    function fromAoA(aoa) {
+      var head = detectHeaderRow(aoa);
+      var hdr = (aoa[head] || []).map(normHeader);
+      var idIdx = -1;
+      hdr.forEach(function (h, i) { if (idIdx < 0 && (h === "id" || h === "id_czlonka" || h === "id_punktu" || /ppe/.test(h))) idIdx = i; });
+      if (idIdx < 0) { showErr("Plik wyników zewnętrznych musi zawierać kolumnę „id”."); return; }
+      var idxByMetric = {};
+      METRICS.forEach(function (mt) { hdr.forEach(function (h, i) { if (h === mt.k) idxByMetric[mt.k] = i; }); });
+      if (!Object.keys(idxByMetric).length) { showErr("Nie znaleziono żadnej kolumny wyników (np. od_sprzedawcy_kwh, oszczednosc_zl) — użyj nazewnictwa z eksportu tego narzędzia."); return; }
+      var map = new Map();
+      for (var r = head + 1; r < aoa.length; r++) {
+        var row = aoa[r] || [];
+        var id = String(row[idIdx] || "").trim();
+        if (!id) continue;
+        var e = {};
+        for (var k in idxByMetric) { var v = num(row[idxByMetric[k]]); if (isFinite(v)) e[k] = v; }
+        map.set(id, e);
+      }
+      if (!map.size) { showErr("Plik wyników zewnętrznych nie zawiera rekordów."); return; }
+      state.ext = { name: file.name, map: map };
+      state.showAll = false; $("showAllChk").checked = false;
+      renderCmp();
+    }
+    if (/\.(xlsx|xls)$/.test(lower)) {
+      if (!HAS_XLSX()) { showErr("Obsługa Excela wymaga internetu przy pierwszym uruchomieniu — zapisz wyniki jako CSV."); return; }
+      var fr = new FileReader();
+      fr.onload = function (e) {
+        try {
+          var wb = XLSX.read(new Uint8Array(e.target.result), { type: "array" });
+          var aoa = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: "" });
+          fromAoA(aoa);
+        } catch (ex) { showErr("Nie udało się odczytać pliku Excel z wynikami."); }
+      };
+      fr.readAsArrayBuffer(file);
+    } else {
+      var fr2 = new FileReader();
+      fr2.onload = function (e) { try { fromAoA(parseCSVText(String(e.target.result)).aoa); } catch (ex) { showErr("Nie udało się odczytać pliku CSV z wynikami."); } };
+      fr2.readAsText(file, "utf-8");
+    }
+  }
+  function genDemoExt() {
+    var m = new Map();
+    state.R.memberResults.forEach(function (r, i) {
+      var e = {};
+      METRICS.forEach(function (mt) { e[mt.k] = mt.get(r); });
+      if (i === 1) e["od_sprzedawcy_kwh"] = e["od_sprzedawcy_kwh"] * 1.037;
+      if (i === 3) e["oszczednosc_zl"] = e["oszczednosc_zl"] - 12.5;
+      if (i === 5) delete e["z_magazynu_kwh"];
+      m.set(r.id, e);
+    });
+    state.ext = { name: "Przykładowe wyniki zewnętrzne (demo z celowymi rozbieżnościami)", map: m };
+    state.showAll = false; $("showAllChk").checked = false;
+    renderCmp();
+  }
+
+  /* ---------- eksporty ---------- */
+  function exportCsvResults() {
+    downloadCsv("rozliczenie_punkty.csv",
+      ["id", "punkt", "czlonek", "rola", "taryfa"].concat(METRICS.map(function (m) { return m.k; })).concat(["koszt_poza_se_zl"]),
+      state.R.memberResults.map(function (m) {
+        return [m.id, m.name, m.owner, m.role, m.tariff].concat(METRICS.map(function (mt) { return mt.get(m).toFixed(mt.d); })).concat([m.kosztBez.toFixed(2)]);
+      }));
+  }
+  function exportXlsx() {
+    if (!HAS_XLSX()) { showErr("Eksport XLSX wymaga jednorazowego uruchomienia z dostępem do internetu (biblioteka Excel). Użyj eksportu CSV — otworzy się w Excelu i Calcu."); return; }
+    showErr("");
+    var R = state.R, prm = state.prm;
+    var s1 = [["ID", "Punkt", "Członek", "Rola", "Taryfa", "Pobór [kWh]", "Generacja [kWh]", "Energia SE OZE [kWh]", "Nie-OZE [kWh]", "Od sprzedawcy [kWh]", "Do magazynu [kWh]", "Sprzedaż nadwyżki [kWh]", "Koszt w SE [zł]", "Koszt poza SE [zł]", "Oszczędność [zł]", "Przychód wytwórcy [zł]"]];
+    R.memberResults.forEach(function (m) {
+      s1.push([m.id, m.name, m.owner, m.role, m.tariff, +m.pobor.toFixed(1), +m.oddanie.toFixed(1), +m.eOZE.toFixed(1), +m.eGAS.toFixed(1), +m.fromSeller.toFixed(1), +m.toStorage.toFixed(1), +m.sold.toFixed(1), +m.kosztSE.toFixed(2), +m.kosztBez.toFixed(2), +m.oszcz.toFixed(2), +m.przychod.toFixed(2)]);
+    });
+    var T = R.totals;
+    s1.push(["", "RAZEM", "", "", "", +T.pobor.toFixed(1), +T.oddanie.toFixed(1), +(T.intOZE + T.fromStorage).toFixed(1), +T.intGAS.toFixed(1), +T.fromSeller.toFixed(1), +T.toStorage.toFixed(1), +T.sold.toFixed(1), +T.kosztSE.toFixed(2), +T.kosztBez.toFixed(2), +T.oszcz.toFixed(2), +T.przychod.toFixed(2)]);
+    var s2 = [["Data", "Godzina", "Pobór [kWh]", "Generacja [kWh]", "Wymiana OZE [kWh]", "Nie-OZE [kWh]", "Z magazynu [kWh]", "Od sprzedawcy [kWh]", "Do magazynu po opuście [kWh]", "Sprzedaż nie-OZE [kWh]", "Stan magazynu [kWh]"]];
+    R.coopHourly.forEach(function (r) {
+      s2.push([r.date, r.hour, +r.pobor.toFixed(2), +r.oddanie.toFixed(2), +r.intOZE.toFixed(2), +r.intGAS.toFixed(2), +r.fromStorage.toFixed(2), +r.fromSeller.toFixed(2), +(r.deposited * prm.opust).toFixed(2), +r.sold.toFixed(2), +r.storage.toFixed(1)]);
+    });
+    var s3 = [["ID punktu", "Nazwa", "Członek", "Rola", "Taryfa", "Cena en. [zł/kWh]", "Dystr. zm. [zł/kWh]", "Opł. zwol. [zł/kWh]", "Opł. stała [zł/mies]", "Źródła"]];
+    state.reg.points.forEach(function (pt) {
+      var srcs = pt.sources.map(function (s) {
+        var ti = techInfo(s.tech);
+        return ti.l + " " + (s.power || 0) + " kW" + (s.mode === "meter" ? " (podlicznik " + (s.meterId || "?") + ")" : (s.sharePct !== null && isFinite(s.sharePct) ? " (" + s.sharePct + "%)" : ""));
+      }).join("; ");
+      s3.push([pt.id, pt.name, pt.owner, pt.role, pt.tariff, pt.cEnergia === null || pt.cEnergia === undefined ? "" : pt.cEnergia, pt.cDystr === null || pt.cDystr === undefined ? "" : pt.cDystr, pt.cZwol === null || pt.cZwol === undefined ? "" : pt.cZwol, pt.fixedMonthly || 0, srcs]);
+    });
+    var s4 = [["Parametr", "Wartość"],
+      ["Tryb rozliczania technologii", state.reg.mode === "separated" ? "odseparowany (OZE / nie-OZE)" : "łączny"],
+      ["Współczynnik opustu (OZE)", prm.opust], ["Magazyn początkowy [kWh]", prm.magazynStart],
+      ["Cena energii sprzedawcy [zł/kWh]", prm.cEnergia], ["Opłaty dystrybucyjne zmienne [zł/kWh]", prm.cDystr],
+      ["Opłaty zwolnione dla SE [zł/kWh]", prm.cZwol], ["Cena wewnętrzna energii OZE [zł/kWh]", prm.cWewn],
+      ["Cena wewnętrzna energii nie-OZE [zł/kWh]", prm.cWewnGas], ["Sprzedaż nadwyżki nie-OZE [zł/kWh]", prm.cSellGas],
+      ["Okres rozliczenia", (state.dateFrom || "początek danych") + " – " + (state.dateTo || "koniec danych")],
+      ["Liczba miesięcy (opłaty stałe)", R.months],
+      ["Źródło danych", $("srcLbl").textContent], ["Wygenerowano", new Date().toLocaleString("pl-PL")],
+      ["Narzędzie", "Bilans SE v0.5 — prototyp (MAE, projekty Hercules/Octopus)"],
+      ["Autor aplikacji i silnika rozliczeniowego", "Krzysztof Kasprzak"]];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s1), "Rozliczenie punktów");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s2), "Bilans godzinowy");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s3), "Rejestr punktów i źródeł");
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(s4), "Parametry");
+    var wbout = XLSX.write(wb, { bookType: "xlsx", type: "array" });
+    downloadBlob("BilansSE_rozliczenie.xlsx", new Blob([wbout], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
+  }
+  function exportDiscrepancies() {
+    if (!state.CMP) return;
+    downloadCsv("raport_rozbieznosci.csv",
+      ["id", "punkt", "metryka", "wartosc_narzedzia", "wartosc_zewnetrzna", "roznica", "status", "uwaga"],
+      state.CMP.rows.filter(function (r) { return state.showAll || !r.ok; }).map(function (r) {
+        return [r.id, r.name, r.metric,
+          r.tool === null ? "" : r.tool.toFixed(r.d || 2),
+          r.ext === null ? "" : r.ext.toFixed(r.d || 2),
+          r.diff === null ? "" : r.diff.toFixed(r.d || 2),
+          r.ok ? "zgodne" : "ROZBIEZNOSC", r.note];
+      }));
+  }
+  function exportTemplate() {
+    downloadCsv("szablon_dane_godzinowe.csv",
+      ["data", "godzina", "id_czlonka", "nazwa", "pobor_kwh", "oddanie_kwh"],
+      [["2026-06-01", 0, "M1", "Urząd Gminy", "3,4", "0"],
+       ["2026-06-01", 1, "M1", "Urząd Gminy", "3,1", "0"],
+       ["2026-06-01", 12, "M8", "Instalacja PV SE", "0,5", "128,6"]]);
+  }
+
+  /* ---------- parametry ---------- */
+  function syncPrmInputs() {
+    var map = { pOpust: "opust", pMag: "magazynStart", pEn: "cEnergia", pDy: "cDystr", pZw: "cZwol", pWe: "cWewn", pWg: "cWewnGas", pSg: "cSellGas" };
+    for (var id in map) $(id).value = state.prm[map[id]];
+    $("pMode").value = state.reg.mode;
+    $("pFrom").value = state.dateFrom; $("pTo").value = state.dateTo;
+  }
+  ["pOpust", "pMag", "pEn", "pDy", "pZw", "pWe", "pWg", "pSg"].forEach(function (id) {
+    var map = { pOpust: "opust", pMag: "magazynStart", pEn: "cEnergia", pDy: "cDystr", pZw: "cZwol", pWe: "cWewn", pWg: "cWewnGas", pSg: "cSellGas" };
+    $(id).addEventListener("input", function () {
+      var v = num($(id).value);
+      state.prm[map[id]] = isFinite(v) ? v : 0;
+      saveCfg();
+      debounceRecompute(300);
+    });
+  });
+  $("pMode").addEventListener("change", function () { state.reg.mode = this.value; saveCfg(); recompute(); });
+  $("pFrom").addEventListener("change", function () { state.dateFrom = this.value; saveCfg(); recompute(); });
+  $("pTo").addEventListener("change", function () { state.dateTo = this.value; saveCfg(); recompute(); });
+
+  /* ---------- zdarzenia ogólne ---------- */
+  function setTopActive(btnId) {
+    ["btnImport", "btnDemo", "btnTpl", "btnXlsx", "btnCsv", "btnSelectDir", "btnCfg", "btnInstr"].forEach(function (id) {
+      var btn = $(id);
+      if (!btn) return;
+      if (id === btnId) btn.classList.add("solid");
+      else btn.classList.remove("solid");
+    });
+  }
+
+  $("btnImport").addEventListener("click", function () {
+    setTopActive("btnImport");
+    $("cfgBox").classList.add("hide");
+    $("instrBox").classList.add("hide");
+    $("fileIn").click();
+  });
+  $("fileIn").addEventListener("change", function (e) {
+    if (e.target.files && e.target.files.length) openWizardWithFiles(e.target.files);
+    e.target.value = "";
+  });
+  $("btnDemo").addEventListener("click", function () {
+    setTopActive("btnDemo");
+    $("cfgBox").classList.add("hide");
+    $("instrBox").classList.add("hide");
+    state.rows = generateDemo(); state.meta = { rejected: 0, sub60: false };
+    state.reg = demoRegistry();
+    state.ext = null; state.day = null; state.stepsWho = "__coop";
+    state.dateFrom = ""; state.dateTo = "";
+    $("srcLbl").textContent = "Dane demonstracyjne · czerwiec 2026";
+    showErr(""); $("wizard").classList.add("hide");
+    syncPrmInputs(); saveCfg(); recompute();
+  });
+  $("btnTpl").addEventListener("click", function () { setTopActive("btnTpl"); exportTemplate(); });
+  $("btnXlsx").addEventListener("click", function () { setTopActive("btnXlsx"); exportXlsx(); });
+  $("btnCsv").addEventListener("click", function () { setTopActive("btnCsv"); exportCsvResults(); });
+  $("btnSelectDir").addEventListener("click", selectDirectory);
+  $("btnCfg").addEventListener("click", function () {
+    var b = $("cfgBox");
+    b.classList.toggle("hide");
+    if (!b.classList.contains("hide")) {
+      $("instrBox").classList.add("hide");
+      setTopActive("btnCfg");
+    } else setTopActive(null);
+  });
+  $("btnInstr").addEventListener("click", function () {
+    var b = $("instrBox");
+    b.classList.toggle("hide");
+    if (!b.classList.contains("hide")) {
+      $("cfgBox").classList.add("hide");
+      setTopActive("btnInstr");
+    } else setTopActive(null);
+  });
+  $("heatBox").addEventListener("click", function (e) {
+    var el = e.target;
+    while (el && el !== this && !el.getAttribute("data-day")) el = el.parentElement;
+    if (el && el.getAttribute && el.getAttribute("data-day")) { state.day = el.getAttribute("data-day"); renderHeat(); renderChart(); renderSteps(); }
+  });
+  function setDay(d) {
+    var days = state.R.days;
+    if (!days.length) return;
+    if (days.indexOf(d) < 0) {
+      var best = days[0];
+      for (var i = 0; i < days.length; i++) if (days[i] <= d) best = days[i];
+      d = best;
+    }
+    state.day = d;
+    renderHeat(); renderChart(); renderSteps();
+  }
+  $("dayPick").addEventListener("change", function () { if (this.value) setDay(this.value); });
+  $("dayPrev").addEventListener("click", function () {
+    var days = state.R.days, i = days.indexOf(state.day);
+    if (i > 0) setDay(days[i - 1]);
+  });
+  $("dayNext").addEventListener("click", function () {
+    var days = state.R.days, i = days.indexOf(state.day);
+    if (i >= 0 && i < days.length - 1) setDay(days[i + 1]);
+  });
+  $("stepsWho").addEventListener("change", function () { state.stepsWho = this.value; renderSteps(); });
+  $("wzSheet").addEventListener("change", function () { wiz.cur.sheet = this.value; wizardDetect(); });
+  $("wzHead").addEventListener("change", function () {
+    wiz.cur.head = Math.max(0, parseInt(this.value, 10) - 1);
+    wiz.cur.det = autoDetect(wiz.cur.aoa, wiz.cur.head);
+    $("wzFormat").value = wiz.cur.det.format;
+    renderMapping(); renderPreview();
+  });
+  $("wzFormat").addEventListener("change", function () { renderMapping(); });
+  $("wzAdd").addEventListener("click", wizardAdd);
+  $("wzSkip").addEventListener("click", nextWizardFile);
+  $("wzCancel").addEventListener("click", function () { $("wizard").classList.add("hide"); wiz.queue = []; wiz.staged = []; });
+  $("btnExt").addEventListener("click", function () { $("extIn").click(); });
+  $("extIn").addEventListener("change", function (e) {
+    if (e.target.files && e.target.files[0]) loadExt(e.target.files[0]);
+    e.target.value = "";
+  });
+  $("btnExtDemo").addEventListener("click", genDemoExt);
+  $("btnExtCsv").addEventListener("click", exportDiscrepancies);
+  $("tolIn").value = state.tolPct;
+  $("tolIn").addEventListener("change", function () {
+    var v = num(this.value); state.tolPct = isFinite(v) && v >= 0 ? v : 0; renderCmp();
+  });
+  $("showAllChk").addEventListener("change", function () { state.showAll = this.checked; renderCmp(); });
+
+  loadCfg();
+  syncPrmInputs();
+  recompute();
+})();
+</script>
+<!--APP-SCRIPT-END-->
+</body>
+</html>
